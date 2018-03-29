@@ -1,0 +1,233 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PayKassa\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-03-29 00:16+0300\n"
+"PO-Revision-Date: 2018-03-29 00:20+0300\n"
+"Last-Translator: Anton Lokotkov (ziscod) <fakeemail@fakeemail.com>\n"
+"Language-Team: Ziscod\n"
+"Language: ru_RU\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: __;_e;esc_attr__;esc_html__;esc_attr_e;esc_html_e;_n;"
+"esc_html;esc_attr\n"
+"X-Poedit-Basepath: ..\n"
+"X-Generator: Poedit 2.0.6\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Poedit-SearchPath-0: ./includes/.\n"
+
+#: includes/./class-paykassa_gateway.php:45
+#: includes/./class-paykassa_gateway.php:210
+msgid "PayKassa"
+msgstr "PayKassa"
+
+#: includes/./class-paykassa_gateway.php:46
+msgid "Provide services of receiving payments on the website"
+msgstr "Предоставляет услуги приема платежей на сайте"
+
+#: includes/./class-paykassa_gateway.php:66
+#, php-format
+msgid "%sSandbox enabled.%s"
+msgstr "%sТестовый режим включен%s"
+
+#: includes/./class-paykassa_gateway.php:127
+msgid "Payment completed"
+msgstr "Оплата завершена"
+
+#: includes/./class-paykassa_gateway.php:136
+msgid "PayKassa Request Failure"
+msgstr "Сбой запроса к PayKassa"
+
+#: includes/./class-paykassa_gateway.php:136
+msgid "PayKassa IPN"
+msgstr "PayKassa IPN"
+
+#: includes/./class-paykassa_gateway.php:149
+#, php-format
+msgid "Payment for cancelled order %s received"
+msgstr "Оплата за отмененный заказ %s получена"
+
+#: includes/./class-paykassa_gateway.php:151
+#, php-format
+msgid ""
+"Order #%s has been marked paid by PayKassa, but was previously cancelled. "
+"Admin handling required."
+msgstr ""
+"Заказ #%s был отмечен как оплаченный, но ранее был отменен. Требуется "
+"обработка администратора."
+
+#: includes/./class-paykassa_gateway.php:201
+msgid "Enable/Disable"
+msgstr "Включить/Выключить"
+
+#: includes/./class-paykassa_gateway.php:203
+msgid "Enable PayKassa transfer"
+msgstr "Включить оплату по PayKassa"
+
+#: includes/./class-paykassa_gateway.php:207
+msgid "Title"
+msgstr "Название"
+
+#: includes/./class-paykassa_gateway.php:209
+msgid "This controls the title which the user sees during checkout."
+msgstr "Заголовок, который видит пользователь в процессе оформления заказа."
+
+#: includes/./class-paykassa_gateway.php:214
+msgid "Description"
+msgstr "Описание"
+
+#: includes/./class-paykassa_gateway.php:216
+msgid "Payment method description that the customer will see on your checkout."
+msgstr ""
+"Описание способа оплаты, которое клиент будет видеть при оформлении заказа."
+
+#: includes/./class-paykassa_gateway.php:217
+msgid ""
+"It allowing you to instantly make payments on your website and make bulk "
+"payments through many payment systems."
+msgstr ""
+"Позволяет моментально принимать платежи на своем сайте и делать массовые "
+"выплаты, через множество платежных систем."
+
+#: includes/./class-paykassa_gateway.php:221
+msgid "Shop ID"
+msgstr "ID магазина"
+
+#: includes/./class-paykassa_gateway.php:223
+msgid "ID from Shop settings page. Required parameter."
+msgstr ""
+"Идентификатор магазина. Берется из настроек магазина. Обязательный параметр."
+
+#: includes/./class-paykassa_gateway.php:227
+msgid "Password shop"
+msgstr "Пароль магазина"
+
+#: includes/./class-paykassa_gateway.php:229
+msgid "The secret key from Shop settings page. Required parameter."
+msgstr "Секретный ключ из настроек магазина. Обязательный параметр."
+
+#: includes/./class-paykassa_gateway.php:233
+msgid "PayKassa sandbox"
+msgstr "Песочница"
+
+#: includes/./class-paykassa_gateway.php:235
+msgid "Enable PayKassa sandbox"
+msgstr "Включить тестовый режим"
+
+#: includes/./class-paykassa_gateway.php:237
+msgid "PayKassa sandbox can be used to test payments."
+msgstr "Песочница используется для проверки тестовых платежей."
+
+#: includes/./class-paykassa_gateway.php:249
+msgid "PayKassa gateway"
+msgstr "PayKassa шлюз"
+
+#: includes/./class-paykassa_gateway.php:251
+msgid "Before using, please take the following steps:"
+msgstr "Перед использованием, пожалуйста выполните следующие шаги:"
+
+#: includes/./class-paykassa_gateway.php:254
+#, php-format
+msgid "%sRegister%s and add new shop."
+msgstr "%sЗарегестируйтесь%s и добавьте новый магазин."
+
+#: includes/./class-paykassa_gateway.php:255
+msgid "Set the following endpoints:"
+msgstr "Установите следующие конечные точки:"
+
+#: includes/./class-paykassa_gateway.php:257
+#, php-format
+msgid ""
+"URL notification: https://YOUR_STORE.COM/%s?wc-api=wc_gateway_paykassa%s"
+msgstr ""
+"URL уведомлений: https://YOUR_STORE.COM/%s?wc-api=wc_gateway_paykassa%s"
+
+#: includes/./class-paykassa_gateway.php:265
+msgid "Gateway disabled"
+msgstr "Шлюз отключен"
+
+#: includes/./class-paykassa_gateway.php:265
+msgid ""
+"PayKassa does not support your store currency. Supported currencies - RUB, "
+"USD, BTC, ETH, LTC, DASH, BCH, ZEC"
+msgstr ""
+"PayKassa не поддерживает вашу валюту магазина. Поддерживаемые валюты - RUB, "
+"USD, BTC, ETH, LTC, DASH, BCH, ZEC"
+
+#: includes/./class-paykassa_gateway.php:304
+#: includes/./class-paykassa_gateway.php:339
+#, php-format
+msgid "Error: %s"
+msgstr "Ошибка: %s"
+
+#: includes/./class-paykassa_gateway.php:318
+msgid ""
+"There is issue for connectin payment gateway. Sorry for the inconvenience."
+msgstr "Проблема в шлюзе при подключения. Приносим извинения за неудобства."
+
+#: includes/./class-paykassa_gateway.php:321
+msgid "Response was not get any data."
+msgstr "Ответ не получил данных."
+
+#: includes/./class-paykassa_gateway.php:330
+msgid "Response body is empty."
+msgstr "Пустой обратный ответ."
+
+#: includes/./class-paykassa_gateway.php:332
+msgid "Payment pending"
+msgstr "Ожидание выплаты"
+
+#: includes/./class-paykassa_gateway.php:442
+#, php-format
+msgid "Order - #%s"
+msgstr "Заказ - №%s"
+
+#: includes/./class-paykassa_gateway.php:486
+#, php-format
+msgid ""
+"<strong>%s</strong> is enabled and WooCommerce is not forcing the SSL "
+"certificate on your checkout page. Please ensure that you have a valid SSL "
+"certificate and that you are <a href=\"%s\">forcing the checkout pages to be "
+"secured</a>."
+msgstr ""
+"<strong>%s</strong> включена, но WooCommerce не использует SSL на странице "
+"оплаты. Пожалуйста, убедитесь что имеете валидный SSL сертификат и включили "
+"<a href=\"%s\">принудительную защиту оформления заказа</a>."
+
+#: includes/./class-paykassa_install.php:34
+msgid "Visit PayKassa settings"
+msgstr "Настройки PayKassa"
+
+#: includes/./class-paykassa_install.php:34
+msgid "Settings"
+msgstr "Настройки"
+
+#: includes/./class-paykassa_install.php:35
+msgid "Send money to me"
+msgstr "Перевести средства"
+
+#: includes/./class-paykassa_install.php:35
+msgid "Donate"
+msgstr "Помощь"
+
+#~ msgid "URL notification: https://YOUR_STORE.COM/%s?wcpaykassa=info%s"
+#~ msgstr "URL уведомлений: https://YOUR_STORE.COM/%s?wcpaykassa=info%s"
+
+#~ msgid "URL success payment: https://YOUR_STORE.COM/%s?wcpaykassa=success%s"
+#~ msgstr "URL успешной оплаты: https://YOUR_STORE.COM/%s?wcpaykassa=success%s"
+
+#~ msgid "URL fail payment: https://YOUR_STORE.COM/%s?wcpaykassa=error%s"
+#~ msgstr "URL неудачной оплаты: https://YOUR_STORE.COM/%s?wcpaykassa=error%s"
+
+#~ msgid ""
+#~ "<strong>%s</strong> is enabled and WooCommerce is not forcing the SSL "
+#~ "certificate on your checkout page. Please ensure that you have a valid "
+#~ "SSL certificate and that you are <a href=\"%s\">forcing the checkout "
+#~ "pages to be secured.</a>"
+#~ msgstr ""
+#~ "<strong>%s</strong> и WooCommerce не использует SSL на странице оплаты. "
+#~ "Пожалуйста, убедитесь что имеете валидный SSL сертификат и <a href=\"%s"
+#~ "\">включили соответствующую опцию.</a>"
