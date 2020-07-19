@@ -3,7 +3,7 @@
  * Plugin Name: PayKassa
  * Plugin URI: https://paykassa.pro/?lng=en
  * Description: This plugin is the gateway for PayKassa system of WooCommerce
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: al5dy
  * Author URI: https://ziscod.com
  * License: GPLv3

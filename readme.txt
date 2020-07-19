@@ -1,10 +1,10 @@
 === PayKassa ===
 Contributors: al5dy
-Donate link: https://www.paypal.me/al5dy/5usd
+Donate link: https://money.yandex.ru/to/410012328678499
 Tags: bitcoin, cryptocurrency, woocommerce, gateway, paykassa
 Requires at least: 4.7
-Tested up to: 4.9
-Stable tag: 1.0.1
+Tested up to: 5.4.2
+Stable tag: 1.0.2
 Requires PHP: 5.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -42,7 +42,6 @@ via your favourite FTP application. The WordPress codex contains [instructions o
 = Minimum Requirements =
 
 * PHP version 5.3 or greater (PHP 7.2 or greater is recommended)
-* MySQL version 5.5 or greater (MySQL 5.6 or greater is recommended)
 * WooCommerce 3.0.0 requires WordPress 4.7+
 
 == Screenshots ==
@@ -51,6 +50,9 @@ via your favourite FTP application. The WordPress codex contains [instructions o
 2. Example of payment.
 
 == Changelog ==
+
+= 1.0.2 - 2020-07-20 =
+Update main SCI class
 
 = 1.0.1 - 2018-03-29 =
 Bugfix WC-API->check_response
