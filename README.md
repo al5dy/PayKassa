@@ -8,10 +8,8 @@ Glad to have your support. More awesomes coming soon!
 
 | Type | Address/link |
 | :---: | :--- |
-| PayPal | [https://www.paypal.me/al5dy](https://www.paypal.me/al5dy/5usd) |
 | YandexMoney | [https://money.yandex.ru/to/410012328678499](https://money.yandex.ru/to/410012328678499) |
 | WMZ | `Z337484456205` |
-| XMR | `48miDYP3ndh1P8fHfaDDdPHzQQQHfo8nRHMiWKYcWiqMTrY9uNkBUJiHNKBg8zWEx875JtpyQBtcA6BzVsyHowKA42ARwZh` |
 
 
 ## Main Features
@@ -37,7 +35,6 @@ Automatic installation (or you can download the latest version from this repo)
 ## Minimum Requirements
 
 * PHP version 5.3 or greater (PHP 7.2 or greater is recommended)
-* MySQL version 5.5 or greater (MySQL 5.6 or greater is recommended)
 * WooCommerce 3.0.0 requires WordPress 4.7+
 
 
