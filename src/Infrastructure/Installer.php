@@ -6,7 +6,8 @@ namespace Al5dy\PayKassaWoo\Infrastructure;
 
 final class Installer
 {
-    public const SCHEMA_VERSION = '2';
+    // Version 3 adds owner_token to both event and invoice reservations.
+    public const SCHEMA_VERSION = '3';
     public const OPTION = 'paykassa_schema_version';
 
     public static function activate(): void

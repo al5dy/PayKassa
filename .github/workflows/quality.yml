@@ -20,3 +20,46 @@ jobs:
       - run: composer stan
       - run: npm run test
       - run: npm run plugin-zip
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.1'
+            wordpress: '6.6'
+            woocommerce: '8.5.2'
+          - php: '8.2'
+            wordpress: '7.1'
+            woocommerce: '11.1.0'
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: paykassa-ci-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      PAYKASSA_TEST_DB_HOST: 127.0.0.1:3306
+      PAYKASSA_TEST_DB_USER: root
+      PAYKASSA_TEST_DB_PASSWORD: paykassa-ci-only
+      PAYKASSA_TEST_WP_VERSION: '${{ matrix.wordpress }}'
+      PAYKASSA_TEST_WC_VERSION: '${{ matrix.woocommerce }}'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '${{ matrix.php }}'
+          extensions: mysqli, mbstring, dom, gd
+          tools: wp-cli
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: python3 tools/verify_readme_guard.py
+      - run: npm run plugin-zip
+      - name: Clean ZIP installation, schema v2 to v3 and payment smoke
+        run: bash scripts/test-integration.sh
