@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<ruleset name="PayKassa">
+  <description>Baseline quality checks for project-owned PHP.</description>
+  <file>src</file>
+  <rule ref="PSR12"/>
+  <rule ref="PSR1.Methods.CamelCapsMethodName">
+    <severity>0</severity>
+  </rule>
+  <rule ref="Generic.Files.LineLength">
+    <severity>0</severity>
+  </rule>
+  <exclude-pattern>*/vendor/*</exclude-pattern>
+</ruleset>

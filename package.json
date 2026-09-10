@@ -1,0 +1,11 @@
+{
+  "name": "paykassa-for-woocommerce",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "lint": "node --check assets/build/blocks.js",
+    "test": "npm run lint",
+    "build": "node --check assets/build/blocks.js",
+    "plugin-zip": "bash scripts/package.sh"
+  }
+}

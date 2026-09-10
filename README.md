@@ -1,43 +1,24 @@
-# PayKassa
+# PayKassa for WooCommerce
 
-[This plugin](https://wordpress.org/plugins/paykassa/) is the gateway for PayKassa system of WooCommerce.
+PHP 8.1+ WooCommerce payment gateway with a conservative, provider-verified crypto payment flow.
 
-## Donate (if you like this plugin <3)
+## Development
 
-Glad to have your support. More awesomes coming soon!
+```bash
+composer install
+npm install
+npm run build
+composer test
+composer lint
+composer stan
+npm test
+npm run plugin-zip
+```
 
-| Type | Address/link |
-| :---: | :--- |
-| YandexMoney | [https://money.yandex.ru/to/410012328678499](https://money.yandex.ru/to/410012328678499) |
-| WMZ | `Z337484456205` |
+The production plugin has its own minimal PSR-4 autoloader, so merchants never run Composer. Composer only supplies development tooling.
 
+## Provider contract
 
-## Main Features
+The SCI/API adapter implements the documented PayKassa endpoints and payload shapes from the official `paykassa-dev/paykassa-modules` wrapper at commit `1b3b4d4a0dcda0769b9bca7fef5bb131c923fbb8` (2025-03-29). It deliberately uses WordPress HTTP with TLS verification instead of shipping or modifying that wrapper's cURL implementation.
 
-* Supports: RUB, USD, BTC, ETH, LTC, DASH, BCH, ZEC
-* Native work with WooCommerce
-* Well organized source code
-* WP Hooks/Filters
-* Russian and English language support
-
-
-## Installation
-
-Automatic installation (or you can download the latest version from this repo)
-
-1. Log into your WordPress admin area
-2. Go to Plugins -> Add New
-3. Search for PayKassa -> Install Now (under PayKassa)
-4. Activate the plugin
-5. Go to WooCommerce -> Settings -> Checkout Tab -> PayKassa
-
-
-## Minimum Requirements
-
-* PHP version 5.3 or greater (PHP 7.2 or greater is recommended)
-* WooCommerce 3.0.0 requires WordPress 4.7+
-
-
-## License
-
-GNU <https://raw.githubusercontent.com/al5dy/paykassa/master/LICENSE>
+See [architecture](docs/architecture.md), [payment flow](docs/payment-flow.md), [webhook security](docs/webhook-security.md), [testing](docs/testing.md), and [releasing](docs/releasing.md).

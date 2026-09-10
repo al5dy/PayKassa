@@ -1,188 +1,249 @@
-#, fuzzy
+# Copyright (C) 2026 al5dy
+# This file is distributed under the GPL-3.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: PayKassa\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-03-29 00:16+0300\n"
-"PO-Revision-Date: 2017-10-10 14:30+0300\n"
-"Last-Translator: Anton L <someemail@someemail.com>\n"
-"Language-Team: Ziscod\n"
-"Language: en\n"
+"Project-Id-Version: PayKassa for WooCommerce 2.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/paykassa\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Poedit-KeywordsList: __;_e;esc_attr__;esc_html__;esc_attr_e;esc_html_e;_n;esc_html;esc_attr\n"
-"X-Poedit-Basepath: ..\n"
-"X-Generator: Poedit 2.0.6\n"
-"X-Poedit-SourceCharset: UTF-8\n"
-"X-Poedit-SearchPath-0: ./includes/.\n"
+"POT-Creation-Date: 2026-09-10T17:42:55+02:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: paykassa\n"
 
-#: includes/./class-paykassa_gateway.php:45
-#: includes/./class-paykassa_gateway.php:210
+#. Plugin Name of the plugin
+#: paykassa.php
+msgid "PayKassa for WooCommerce"
+msgstr ""
+
+#. Description of the plugin
+#: paykassa.php
+msgid "Modern crypto payments for WooCommerce through PayKassa."
+msgstr ""
+
+#. Author of the plugin
+#: paykassa.php
+msgid "al5dy"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:18
+msgid "Payment state"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:19
+msgid "PayKassa transaction"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:20
+msgid "Invoice"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:21
+msgid "Network"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:22
+msgid "Amount"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:23
+msgid "Payment address"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:24
+msgid "Tag / memo"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:25
+msgid "Last webhook"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:26
+msgid "Environment"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:28
+msgid "PayKassa payment"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:12
+msgid "PayKassa payment configuration"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:20
+msgid "PayKassa needs merchant credentials"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:20
+msgid "The gateway is enabled but its merchant credentials are incomplete."
+msgstr ""
+
+#: src/Admin/SiteHealth.php:23
+msgid "PayKassa needs HTTPS in live mode"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:23
+msgid "Enable HTTPS before accepting live cryptocurrency payments."
+msgstr ""
+
+#: src/Admin/SiteHealth.php:25
+msgid "PayKassa configuration looks ready"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:25
+msgid "No credentials or HTTPS issue was detected."
+msgstr ""
+
+#: src/Blocks/PayKassaPaymentMethod.php:40
+#: src/Gateway/PayKassaGateway.php:23
+#: src/Gateway/PayKassaGateway.php:31
+#: assets/build/blocks.js:4
+msgid "Cryptocurrency (PayKassa)"
+msgstr ""
+
+#: src/Blocks/PayKassaPaymentMethod.php:41
+#: src/Gateway/PayKassaGateway.php:24
+#: src/Gateway/PayKassaGateway.php:32
+msgid "Pay securely with cryptocurrency through PayKassa."
+msgstr ""
+
+#: src/Gateway/PayKassaGateway.php:16
 msgid "PayKassa"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:46
-msgid "Provide services of receiving payments on the website"
+#: src/Gateway/PayKassaGateway.php:17
+msgid "Provider-verified cryptocurrency payments through PayKassa."
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:66
-#, php-format
-msgid "%sSandbox enabled.%s"
-msgstr ""
-
-#: includes/./class-paykassa_gateway.php:127
-msgid "Payment completed"
-msgstr ""
-
-#: includes/./class-paykassa_gateway.php:136
-msgid "PayKassa Request Failure"
-msgstr ""
-
-#: includes/./class-paykassa_gateway.php:136
-msgid "PayKassa IPN"
-msgstr ""
-
-#: includes/./class-paykassa_gateway.php:149
-#, php-format
-msgid "Payment for cancelled order %s received"
-msgstr ""
-
-#: includes/./class-paykassa_gateway.php:151
-#, php-format
-msgid "Order #%s has been marked paid by PayKassa, but was previously cancelled. Admin handling required."
-msgstr ""
-
-#: includes/./class-paykassa_gateway.php:201
+#: src/Gateway/PayKassaGateway.php:30
 msgid "Enable/Disable"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:203
-msgid "Enable PayKassa transfer"
+#: src/Gateway/PayKassaGateway.php:30
+msgid "Enable PayKassa"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:207
+#: src/Gateway/PayKassaGateway.php:31
 msgid "Title"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:209
-msgid "This controls the title which the user sees during checkout."
-msgstr ""
-
-#: includes/./class-paykassa_gateway.php:214
+#: src/Gateway/PayKassaGateway.php:32
 msgid "Description"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:216
-msgid "Payment method description that the customer will see on your checkout."
+#: src/Gateway/PayKassaGateway.php:33
+msgid "Merchant / Shop ID"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:217
-msgid "It allowing you to instantly make payments on your website and make bulk payments through many payment systems."
+#: src/Gateway/PayKassaGateway.php:33
+msgid "Your PayKassa SCI merchant identifier."
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:221
-msgid "Shop ID"
+#: src/Gateway/PayKassaGateway.php:34
+msgid "Merchant secret"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:223
-msgid "ID from Shop settings page. Required parameter."
+#: src/Gateway/PayKassaGateway.php:34
+#: src/Gateway/PayKassaGateway.php:38
+msgid "Leave blank when saving to keep the current secret."
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:227
-msgid "Password shop"
+#: src/Gateway/PayKassaGateway.php:35
+msgid "Test mode"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:229
-msgid "The secret key from Shop settings page. Required parameter."
+#: src/Gateway/PayKassaGateway.php:35
+msgid "Use PayKassa test mode"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:233
-msgid "PayKassa sandbox"
+#: src/Gateway/PayKassaGateway.php:36
+msgid "Enabled payment networks"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:235
-msgid "Enable PayKassa sandbox"
+#: src/Gateway/PayKassaGateway.php:36
+msgid "Comma-separated current PayKassa system keys (for example bitcoin,tron_trc20,ton). Leave empty to enable documented crypto directions compatible with the order currency."
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:237
-msgid "PayKassa sandbox can be used to test payments."
+#: src/Gateway/PayKassaGateway.php:37
+msgid "API ID (optional)"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:249
-msgid "PayKassa gateway"
+#: src/Gateway/PayKassaGateway.php:37
+msgid "Only required for connection tests and payment recovery."
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:251
-msgid "Before using, please take the following steps:"
+#: src/Gateway/PayKassaGateway.php:38
+msgid "API password (optional)"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:254
-#, php-format
-msgid "%sRegister%s and add new shop."
+#: src/Gateway/PayKassaGateway.php:39
+msgid "Payment recovery"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:255
-msgid "Set the following endpoints:"
+#: src/Gateway/PayKassaGateway.php:39
+msgid "Enable bounded background reconciliation when API credentials are configured"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:257
-#, php-format
-msgid "URL notification: https://YOUR_STORE.COM/%s?wc-api=wc_gateway_paykassa%s"
+#: src/Gateway/PayKassaGateway.php:40
+msgid "Debug logging"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:265
-msgid "Gateway disabled"
+#: src/Gateway/PayKassaGateway.php:40
+msgid "Write redacted diagnostic logs"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:265
-msgid "PayKassa does not support your store currency. Supported currencies - RUB, USD, BTC, ETH, LTC, DASH, BCH, ZEC"
+#: src/Gateway/PayKassaGateway.php:41
+msgid "Uninstall cleanup"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:304
-#: includes/./class-paykassa_gateway.php:339
-#, php-format
-msgid "Error: %s"
+#: src/Gateway/PayKassaGateway.php:41
+msgid "Delete plugin settings and webhook audit data on uninstall"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:318
-msgid "There is issue for connectin payment gateway. Sorry for the inconvenience."
+#: src/Gateway/PayKassaGateway.php:71
+#: assets/build/blocks.js:17
+msgid "Cryptocurrency network"
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:321
-msgid "Response was not get any data."
+#: src/Gateway/PayKassaGateway.php:83
+msgid "Choose an available PayKassa cryptocurrency network."
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:330
-msgid "Response body is empty."
+#: src/Gateway/PayKassaGateway.php:93
+msgid "We could not find this order."
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:332
-msgid "Payment pending"
+#: src/Gateway/PayKassaGateway.php:104
+msgid "PayKassa payment creation failed. See redacted PayKassa logs for correlation details."
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:442
-#, php-format
-msgid "Order - #%s"
+#: src/Gateway/PayKassaGateway.php:105
+msgid "We could not start the PayKassa payment. Please try another method or contact the store."
 msgstr ""
 
-#: includes/./class-paykassa_gateway.php:486
-#, php-format
-msgid "<strong>%s</strong> is enabled and WooCommerce is not forcing the SSL certificate on your checkout page. Please ensure that you have a valid SSL certificate and that you are <a href=\"%s\">forcing the checkout pages to be secured</a>."
+#: src/Order/OrderPaymentService.php:42
+msgid "PayKassa payment invoice created; awaiting provider confirmation."
 msgstr ""
 
-#: includes/./class-paykassa_install.php:34
-msgid "Visit PayKassa settings"
+#: src/Support/Requirements.php:21
+msgid "PayKassa for WooCommerce requires PHP 8.1+, WordPress 6.6+, and WooCommerce 8.5+."
 msgstr ""
 
-#: includes/./class-paykassa_install.php:34
-msgid "Settings"
+#: src/Webhook/WebhookProcessor.php:28
+msgid "PayKassa verified a payment that does not match the immutable invoice snapshot. Manual review required."
 msgstr ""
 
-#: includes/./class-paykassa_install.php:35
-msgid "Send money to me"
+#: src/Webhook/WebhookProcessor.php:39
+msgid "PayKassa confirmed a payment after this order was cancelled. Funds were not ignored; manual review is required before fulfilment."
 msgstr ""
 
-#: includes/./class-paykassa_install.php:35
-msgid "Donate"
+#: src/Webhook/WebhookProcessor.php:52
+msgid "PayKassa payment confirmed by provider verification."
+msgstr ""
+
+#: assets/build/blocks.js:15
+msgid "PayKassa payment options"
 msgstr ""
