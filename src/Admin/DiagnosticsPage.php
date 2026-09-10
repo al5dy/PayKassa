@@ -37,7 +37,7 @@ final class DiagnosticsPage
                 $state = 'failed';
             }
         }
-        set_transient('paykassa_connection_test', $state, 5 * MINUTE_IN_SECONDS);
+        set_transient('paykassa_connection_test_' . get_current_user_id(), $state, 5 * MINUTE_IN_SECONDS);
         wp_safe_redirect(admin_url('admin.php?page=paykassa-health'));
         exit;
     }
@@ -62,10 +62,11 @@ final class DiagnosticsPage
             'Last reconciliation' => get_option('paykassa_last_reconciliation', __('Never', 'paykassa')),
         );
         echo '<div class="wrap"><h1>' . esc_html__('PayKassa payment health', 'paykassa') . '</h1>';
-        $result = get_transient('paykassa_connection_test');
+        $connection_key = 'paykassa_connection_test_' . get_current_user_id();
+        $result = get_transient($connection_key);
         if (false !== $result) {
             echo '<div class="notice notice-info"><p>' . esc_html('connected' === $result ? __('Connected: PayKassa API credentials were accepted.', 'paykassa') : ( 'failed' === $result ? __('Connection failed. Check API credentials or PayKassa availability.', 'paykassa') : __('Add API credentials to run the read-only connection test. SCI credentials have no documented read-only test.', 'paykassa') )) . '</p></div>';
-            delete_transient('paykassa_connection_test');
+            delete_transient($connection_key);
         }
         echo '<table class="widefat striped"><tbody>';
         foreach ($report as $label => $value) {

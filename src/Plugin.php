@@ -18,7 +18,17 @@ final class Plugin
     public function register(): void
     {
         if (get_option(Installer::OPTION) !== Installer::SCHEMA_VERSION) {
-            Installer::migrate();
+            try {
+                Installer::migrate();
+            } catch (\Throwable $exception) {
+                // A broken/customized database must not turn ordinary frontend
+                // requests into a PHP fatal or leave a partially initialized
+                // payment gateway available.
+                add_action('admin_notices', static function (): void {
+                    echo '<div class="notice notice-error"><p>' . esc_html__('PayKassa could not verify its payment-event database schema. The gateway remains disabled; please retry the migration from WooCommerce status tools.', 'paykassa') . '</p></div>';
+                });
+                return;
+            }
         }
         add_filter('woocommerce_payment_gateways', static function (array $methods): array {
             $methods[] = PayKassaGateway::class;

@@ -4,6 +4,8 @@ use Al5dy\PayKassaWoo\Gateway\PayKassaGateway;
 use Al5dy\PayKassaWoo\Order\OrderMeta;
 use Al5dy\PayKassaWoo\Order\PaymentSnapshot;
 use Al5dy\PayKassaWoo\Order\PaymentState;
+use Al5dy\PayKassaWoo\Order\InvoiceLockStore;
+use Al5dy\PayKassaWoo\Order\InvoiceReservation;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\PayKassa\Dto\PaymentEvidence;
 use Al5dy\PayKassaWoo\Webhook\WebhookEventStore;
@@ -161,6 +163,26 @@ try {
     $late = wc_get_order($late->get_id());
     paykassa_smoke_assert($late_result['accepted'] && $late instanceof WC_Order && $late->has_status('on-hold') && PaymentState::MANUAL_REVIEW === $late->get_meta(OrderMeta::STATE, true), 'Cancelled-order late payment must not be lost or auto-fulfilled.');
 
+    $store = new WebhookEventStore();
+    $lease_transaction = 'lease-' . wp_generate_uuid4();
+    $transactions[] = $lease_transaction;
+    $lease_context = hash('sha256', 'test-merchant' . "\0test");
+    $first_reservation = $store->acquire($lease_transaction, 'fingerprint', $order->get_id(), $lease_context, 'test');
+    $second_reservation = $store->acquire($lease_transaction, 'fingerprint', $order->get_id(), $lease_context, 'test');
+    paykassa_smoke_assert($first_reservation->acquired() && 'duplicate' === $second_reservation->status, 'Concurrent webhook reservations must have one owner.');
+    global $wpdb;
+    $events_table = $wpdb->prefix . 'paykassa_events';
+    $wpdb->query($wpdb->prepare("UPDATE {$events_table} SET lease_expires_at = DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 SECOND) WHERE event_key = %s", $first_reservation->event_key));
+    $reclaimed = $store->acquire($lease_transaction, 'fingerprint', $order->get_id(), $lease_context, 'test');
+    paykassa_smoke_assert($reclaimed->acquired() && $store->begin_settlement($reclaimed->event_key) && $store->finish($reclaimed->event_key, 'processed'), 'Expired webhook lease must be safely reclaimed and finalized.');
+
+    $concurrent_order = paykassa_smoke_order();
+    $orders[] = $concurrent_order->get_id();
+    $lock_store = new InvoiceLockStore();
+    $first_lock = $lock_store->acquire($concurrent_order->get_id());
+    $second_lock = $lock_store->acquire($concurrent_order->get_id());
+    paykassa_smoke_assert(InvoiceReservation::ACQUIRED === $first_lock->status && InvoiceReservation::BUSY === $second_lock->status, 'Concurrent invoice creation must have one reservation owner.');
+
     WP_CLI::success('PayKassa HPOS smoke: invoice idempotency, matching IPN, duplicate IPN, merchant/hash/amount mismatch, and late payment passed.');
 } finally {
     remove_filter('pre_http_request', $transport, 10);
@@ -180,6 +202,7 @@ try {
         $table = $wpdb->prefix . 'paykassa_events';
         $wpdb->query($wpdb->prepare("DELETE FROM {$table} WHERE provider_transaction_id IN ({$placeholders})", ...$transactions));
     }
+    $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}paykassa_invoice_locks WHERE order_id IN (" . implode(',', array_fill(0, count($orders), '%d')) . ')', ...$orders));
     if (null === $original_settings) {
         delete_option('woocommerce_paykassa_settings');
     } else {

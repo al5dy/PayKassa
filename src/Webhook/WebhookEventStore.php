@@ -4,34 +4,107 @@ declare(strict_types=1);
 
 namespace Al5dy\PayKassaWoo\Webhook;
 
+/**
+ * Durable idempotency and processing lease for provider evidence.
+ *
+ * A reservation is intentionally not an acknowledgement. Callers must finish
+ * a terminal event only after the related WooCommerce change is durable.
+ */
 final class WebhookEventStore
 {
-    /** Returns false if an identical provider transaction was already recorded. */
-    public function reserve(string $transaction_id, string $hash_fingerprint, int $order_id): bool
+    private const LEASE_SECONDS = 120;
+
+    public function event_key(string $transaction_id, string $merchant_context, string $environment): string
+    {
+        return hash('sha256', $merchant_context . "\0" . $environment . "\0" . $transaction_id);
+    }
+
+    public function acquire(string $transaction_id, string $hash_fingerprint, int $order_id, string $merchant_context, string $environment, string $source = 'webhook'): EventReservation
     {
         global $wpdb;
         $table = $wpdb->prefix . 'paykassa_events';
-        $previous_suppression = $wpdb->suppress_errors(true);
-        try {
-            $result = $wpdb->query($wpdb->prepare("INSERT INTO {$table} (provider_transaction_id, hash_fingerprint, order_id, event_type, status, created_at) VALUES (%s, %s, %d, %s, %s, UTC_TIMESTAMP())", $transaction_id, $hash_fingerprint, $order_id, 'payment', 'received'));
-        } finally {
-            $wpdb->suppress_errors($previous_suppression);
+        $key = $this->event_key($transaction_id, $merchant_context, $environment);
+        $lease = gmdate('Y-m-d H:i:s', time() + self::LEASE_SECONDS);
+
+        // INSERT IGNORE is used only to turn the expected unique-key collision
+        // into a deterministic branch. A real DB failure is checked below and
+        // returned as ERROR, never confused with a duplicate.
+        $inserted = $wpdb->query($wpdb->prepare(
+            "INSERT IGNORE INTO {$table} (event_key, provider_transaction_id, hash_fingerprint, merchant_context, environment, order_id, event_type, source, status, lease_expires_at, attempts, created_at)
+             VALUES (%s, %s, %s, %s, %s, %d, 'payment', %s, 'received', %s, 1, UTC_TIMESTAMP())",
+            $key,
+            $transaction_id,
+            $hash_fingerprint,
+            $merchant_context,
+            $environment,
+            $order_id,
+            $source,
+            $lease
+        ));
+        if (false === $inserted) {
+            return new EventReservation(EventReservation::ERROR, $key);
         }
-        return 1 === $result;
+        if (1 === $inserted) {
+            return new EventReservation(EventReservation::ACQUIRED, $key);
+        }
+
+        $existing = $wpdb->get_row($wpdb->prepare(
+            "SELECT status FROM {$table} WHERE event_key = %s",
+            $key
+        ));
+        if (!is_object($existing) || !isset($existing->status)) {
+            return new EventReservation(EventReservation::ERROR, $key);
+        }
+
+        // A worker that died before finishing can be reclaimed after its lease.
+        // The status predicate serializes competing redeliveries atomically.
+        $reclaimed = $wpdb->query($wpdb->prepare(
+            "UPDATE {$table}
+             SET status = 'received', lease_expires_at = %s, attempts = attempts + 1
+             WHERE event_key = %s
+               AND status IN ('received', 'settling')
+               AND lease_expires_at < UTC_TIMESTAMP()",
+            $lease,
+            $key
+        ));
+        if (false === $reclaimed) {
+            return new EventReservation(EventReservation::ERROR, $key);
+        }
+        return new EventReservation(1 === $reclaimed ? EventReservation::ACQUIRED : EventReservation::DUPLICATE, $key);
     }
 
-    public function finish(string $transaction_id, string $status, string $error_code = ''): void
+    public function begin_settlement(string $event_key): bool
     {
         global $wpdb;
         $table = $wpdb->prefix . 'paykassa_events';
-        $wpdb->query($wpdb->prepare("UPDATE {$table} SET status = %s, error_code = NULLIF(%s, ''), processed_at = UTC_TIMESTAMP() WHERE provider_transaction_id = %s", $status, $error_code, $transaction_id));
+        $lease = gmdate('Y-m-d H:i:s', time() + self::LEASE_SECONDS);
+        return 1 === $wpdb->query($wpdb->prepare(
+            "UPDATE {$table} SET status = 'settling', lease_expires_at = %s WHERE event_key = %s AND status = 'received'",
+            $lease,
+            $event_key
+        ));
     }
 
-    public function status(string $transaction_id): string
+    /** Returns false on a failed or lost DB update; the provider must retry. */
+    public function finish(string $event_key, string $status, string $error_code = ''): bool
     {
         global $wpdb;
         $table = $wpdb->prefix . 'paykassa_events';
-        $status = $wpdb->get_var($wpdb->prepare("SELECT status FROM {$table} WHERE provider_transaction_id = %s", $transaction_id));
+        return 1 === $wpdb->query($wpdb->prepare(
+            "UPDATE {$table}
+             SET status = %s, error_code = NULLIF(%s, ''), processed_at = UTC_TIMESTAMP(), lease_expires_at = NULL
+             WHERE event_key = %s AND status IN ('received', 'settling')",
+            $status,
+            $error_code,
+            $event_key
+        ));
+    }
+
+    public function status(string $event_key): string
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'paykassa_events';
+        $status = $wpdb->get_var($wpdb->prepare("SELECT status FROM {$table} WHERE event_key = %s", $event_key));
         return is_string($status) ? $status : '';
     }
 }

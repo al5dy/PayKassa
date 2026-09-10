@@ -11,13 +11,23 @@ final class InvoiceLockStore
         global $wpdb;
         $table = $wpdb->prefix . 'paykassa_invoice_locks';
         $lease = gmdate('Y-m-d H:i:s', time() + 120);
-        $result = $wpdb->query($wpdb->prepare("INSERT INTO {$table} (order_id, status, lease_expires_at, created_at, updated_at) VALUES (%d, %s, %s, UTC_TIMESTAMP(), UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE status = IF(status = 'creating' AND lease_expires_at < UTC_TIMESTAMP(), 'creating', status), lease_expires_at = IF(status = 'creating' AND lease_expires_at < UTC_TIMESTAMP(), VALUES(lease_expires_at), lease_expires_at), updated_at = IF(status = 'creating' AND lease_expires_at < UTC_TIMESTAMP(), UTC_TIMESTAMP(), updated_at)", $order_id, 'creating', $lease));
+        $result = $wpdb->query($wpdb->prepare("INSERT IGNORE INTO {$table} (order_id, status, lease_expires_at, created_at, updated_at) VALUES (%d, %s, %s, UTC_TIMESTAMP(), UTC_TIMESTAMP())", $order_id, 'creating', $lease));
         if (false === $result) {
             return new InvoiceReservation(InvoiceReservation::ERROR);
         }
-        // MySQL reports 0 for an unchanged active row, 1 for INSERT and 2 for a
-        // lease takeover. Only the process that changed the row owns the lease.
-        return new InvoiceReservation(in_array((int) $result, array( 1, 2 ), true) ? InvoiceReservation::ACQUIRED : InvoiceReservation::BUSY);
+        if (1 === $result) {
+            return new InvoiceReservation(InvoiceReservation::ACQUIRED);
+        }
+
+        // Do not combine this compare-and-swap with INSERT ... ON DUPLICATE KEY:
+        // MySQL evaluates assignments from left to right, which makes a lease
+        // takeover unnecessarily subtle. A conditional UPDATE gives the caller a
+        // clear ownership signal and never steals a live reservation.
+        $reclaimed = $wpdb->query($wpdb->prepare("UPDATE {$table} SET lease_expires_at = %s, updated_at = UTC_TIMESTAMP(), attempts = attempts + 1 WHERE order_id = %d AND status = 'creating' AND lease_expires_at < UTC_TIMESTAMP()", $lease, $order_id));
+        if (false === $reclaimed) {
+            return new InvoiceReservation(InvoiceReservation::ERROR);
+        }
+        return new InvoiceReservation(1 === $reclaimed ? InvoiceReservation::ACQUIRED : InvoiceReservation::BUSY);
     }
 
     public function complete(int $order_id, string $snapshot_hash): bool

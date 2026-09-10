@@ -14,4 +14,14 @@ final class PaymentStateTest extends TestCase
         self::assertFalse(PaymentState::can_transition(PaymentState::PAID, PaymentState::AWAITING_PAYMENT));
         self::assertTrue(PaymentState::can_transition(PaymentState::AWAITING_PAYMENT, PaymentState::PAID));
     }
+
+    public function test_all_declared_transitions_and_rejections_are_explicit(): void
+    {
+        self::assertTrue(PaymentState::can_transition(PaymentState::INVOICE_CREATED, PaymentState::AWAITING_PAYMENT));
+        self::assertTrue(PaymentState::can_transition(PaymentState::AWAITING_PAYMENT, PaymentState::EXPIRED));
+        self::assertTrue(PaymentState::can_transition(PaymentState::EXPIRED, PaymentState::INVOICE_CREATED));
+        self::assertFalse(PaymentState::can_transition(PaymentState::EXPIRED, PaymentState::PAID));
+        self::expectException(\LogicException::class);
+        PaymentState::assert_transition(PaymentState::PAID, PaymentState::MANUAL_REVIEW);
+    }
 }

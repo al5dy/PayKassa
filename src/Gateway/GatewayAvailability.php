@@ -26,7 +26,10 @@ final class GatewayAvailability
     public function enabled(string $key, array $settings): bool
     {
         $enabled = $settings['enabled_systems'] ?? '';
-        $items = '' === $enabled ? array_keys(( new PaymentSystemRegistry() )->all()) : array_filter(array_map('sanitize_key', explode(',', $enabled)));
+        // A blank setting used to mean "all known systems". That would make a
+        // newly discovered provider direction customer-visible without an
+        // explicit merchant decision, so 2.0 fails closed instead.
+        $items = '' === $enabled ? array() : array_filter(array_map('sanitize_key', explode(',', $enabled)));
         return in_array($key, $items, true);
     }
 }

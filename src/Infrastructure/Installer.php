@@ -30,8 +30,8 @@ final class Installer
 		environment varchar(8) NOT NULL,
 		event_type varchar(32) NOT NULL,
 		status varchar(32) NOT NULL,
-		lease_expires_at datetime NULL,
-		attempts smallint(5) unsigned NOT NULL DEFAULT 0,
+			lease_expires_at datetime NULL,
+			attempts smallint(5) unsigned NOT NULL DEFAULT 0,
 		source varchar(32) NOT NULL DEFAULT 'webhook',
 			created_at datetime NOT NULL,
 			processed_at datetime NULL,
@@ -42,11 +42,12 @@ final class Installer
 			KEY order_status (order_id,status),
 			KEY created_at (created_at)
 		) {$charset_collate};";
-		$invoice_sql = "CREATE TABLE {$invoice_table} (
+        $invoice_sql = "CREATE TABLE {$invoice_table} (
 		order_id bigint(20) unsigned NOT NULL,
 		status varchar(16) NOT NULL,
 		snapshot_hash char(64) NULL,
 		lease_expires_at datetime NULL,
+		attempts smallint(5) unsigned NOT NULL DEFAULT 0,
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
 		PRIMARY KEY  (order_id),
@@ -55,6 +56,7 @@ final class Installer
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
         dbDelta($invoice_sql);
+        self::upgrade_legacy_transaction_index($table);
         if (! self::schema_is_valid()) {
             throw new \RuntimeException('PayKassa database migration verification failed.');
         }
@@ -72,15 +74,38 @@ final class Installer
             return false;
         }
         $columns = $wpdb->get_col("SHOW COLUMNS FROM {$events}", 0);
-        $indexes = $wpdb->get_results("SHOW INDEX FROM {$events}", ARRAY_A);
-        if (! is_array($columns) || ! is_array($indexes) || array_diff(array( 'event_key', 'lease_expires_at', 'attempts', 'merchant_context', 'environment' ), $columns)) {
+        $indexes = $wpdb->get_results("SHOW INDEX FROM {$events}", 'ARRAY_A');
+        $lock_columns = $wpdb->get_col("SHOW COLUMNS FROM {$locks}", 0);
+        if (! is_array($columns) || ! is_array($lock_columns) || ! is_array($indexes) || array_diff(array( 'event_key', 'lease_expires_at', 'attempts', 'merchant_context', 'environment', 'source' ), $columns) || array_diff(array( 'order_id', 'status', 'lease_expires_at', 'attempts' ), $lock_columns)) {
             return false;
         }
+        $has_event_key = false;
         foreach ($indexes as $index) {
             if ('event_key' === ($index['Key_name'] ?? '') && '0' === (string) ($index['Non_unique'] ?? '1')) {
-                return true;
+                $has_event_key = true;
+            }
+            if ('provider_transaction_id' === ($index['Column_name'] ?? '') && '0' === (string) ($index['Non_unique'] ?? '1') && 'event_key' !== ($index['Key_name'] ?? '')) {
+                return false;
             }
         }
-        return false;
+        return $has_event_key;
+    }
+
+    private static function upgrade_legacy_transaction_index(string $table): void
+    {
+        global $wpdb;
+        $indexes = $wpdb->get_results("SHOW INDEX FROM {$table}", 'ARRAY_A');
+        if (! is_array($indexes)) {
+            return;
+        }
+        foreach ($indexes as $index) {
+            $name = isset($index['Key_name']) ? (string) $index['Key_name'] : '';
+            if ('event_key' !== $name && 'provider_transaction_id' === ($index['Column_name'] ?? '') && '0' === (string) ($index['Non_unique'] ?? '1')) {
+                // The table and index name are obtained from MySQL metadata; no
+                // request data is interpolated. This migration permits the same
+                // provider transaction value in distinct merchant/test contexts.
+                $wpdb->query("ALTER TABLE {$table} DROP INDEX `{$name}`");
+            }
+        }
     }
 }

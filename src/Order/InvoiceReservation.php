@@ -14,4 +14,9 @@ final class InvoiceReservation
     public function __construct(public readonly string $status)
     {
     }
+
+    public function acquired(): bool
+    {
+        return self::ACQUIRED === $this->status;
+    }
 }

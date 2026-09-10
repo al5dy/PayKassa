@@ -22,4 +22,13 @@ final class PaymentSnapshotTest extends TestCase
         self::assertNull(PaymentSnapshot::from_json('{'));
         self::assertNull(PaymentSnapshot::from_json('{"order_id":0}'));
     }
+
+    public function test_expiration_and_environment_are_immutable(): void
+    {
+        $snapshot = new PaymentSnapshot(123, '10.00', 'USD', 'BitCoin', 'BTC', 'link-hash', '2026-01-01T00:00:00+00:00', true, 'hosted', 'context', '2026-01-01T01:00:00+00:00', 'merchant-7');
+        self::assertSame('test', $snapshot->environment());
+        self::assertFalse($snapshot->is_expired(strtotime('2026-01-01T00:59:59+00:00')));
+        self::assertTrue($snapshot->is_expired(strtotime('2026-01-01T01:00:00+00:00')));
+        self::assertSame('merchant-7', PaymentSnapshot::from_json((string) json_encode($snapshot->to_array()))->merchant_shop_id);
+    }
 }

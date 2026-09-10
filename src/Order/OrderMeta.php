@@ -12,4 +12,6 @@ final class OrderMeta
     public const HASH_FINGERPRINT = '_paykassa_hash_fingerprint';
     public const LAST_WEBHOOK = '_paykassa_last_webhook_at';
     public const RECONCILIATION = '_paykassa_reconciliation_at';
+    public const PAYMENT_LINK_HASH = '_paykassa_payment_link_hash';
+    public const CREDENTIAL_CONTEXT = '_paykassa_credential_context';
 }
