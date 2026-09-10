@@ -11,7 +11,7 @@ final class InvoiceReservation
     public const BUSY = 'busy';
     public const ERROR = 'error';
 
-    public function __construct(public readonly string $status)
+    public function __construct(public readonly string $status, public readonly string $owner_token = '')
     {
     }
 

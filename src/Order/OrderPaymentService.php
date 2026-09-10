@@ -8,6 +8,7 @@ use Al5dy\PayKassaWoo\Gateway\RedirectUrlValidator;
 use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\PayKassa\PaymentSystemRegistry;
+use Al5dy\PayKassaWoo\PayKassa\Exception\ProviderUnavailableException;
 
 final class OrderPaymentService
 {
@@ -47,7 +48,7 @@ final class OrderPaymentService
         $amount = (string) $order->get_total();
         $registry = new PaymentSystemRegistry();
         if (! $registry->supports_currency($system_key, $currency)) {
-            $locks->fail($order->get_id());
+            $locks->fail($order->get_id(), $reservation->owner_token);
             throw new PayKassaException('The selected PayKassa direction cannot accept this order currency.');
         }
 
@@ -55,7 +56,7 @@ final class OrderPaymentService
             $comment = sprintf('WooCommerce order #%s', $order->get_order_number());
             $result = (new PayKassaClientFactory())->sci($settings)->create_payment($amount, $system_key, $currency, $order->get_id(), $comment);
             if (! RedirectUrlValidator::is_valid($result->redirect_url)) {
-                $locks->fail($order->get_id());
+                $locks->uncertain($order->get_id(), $reservation->owner_token);
                 throw new PayKassaException('PayKassa returned an unsafe payment URL.');
             }
 
@@ -79,7 +80,7 @@ final class OrderPaymentService
             $order->update_meta_data(OrderMeta::CREDENTIAL_CONTEXT, $context);
             $order->save();
 
-            if (! $locks->complete($order->get_id(), hash('sha256', wp_json_encode($snapshot->to_array())))) {
+            if (! $locks->complete($order->get_id(), $reservation->owner_token, hash('sha256', wp_json_encode($snapshot->to_array())))) {
                 // The invoice is stored and can be reused. Do not issue a
                 // second invoice if the lock table fails at this point.
                 throw new PayKassaException('The payment request was saved but its reservation could not be finalized. Please contact the store.');
@@ -87,9 +88,13 @@ final class OrderPaymentService
             $order->add_order_note(__('PayKassa payment invoice created; awaiting provider confirmation.', 'paykassa'));
             do_action('paykassa_payment_created', $order, $snapshot);
             return $result->redirect_url;
-        } catch (PayKassaException $exception) {
+        } catch (ProviderUnavailableException $exception) {
             // A provider timeout is ambiguous: retaining the lease is safer
             // than releasing it and creating a potentially duplicate invoice.
+            $locks->uncertain($order->get_id(), $reservation->owner_token);
+            throw $exception;
+        } catch (PayKassaException $exception) {
+            $locks->uncertain($order->get_id(), $reservation->owner_token);
             throw $exception;
         }
     }

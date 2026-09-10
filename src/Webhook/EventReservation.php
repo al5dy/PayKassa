@@ -10,7 +10,7 @@ final class EventReservation
     public const DUPLICATE = 'duplicate';
     public const ERROR = 'error';
 
-    public function __construct(public readonly string $status, public readonly string $event_key)
+    public function __construct(public readonly string $status, public readonly string $event_key, public readonly string $owner_token = '')
     {
     }
 

@@ -38,7 +38,7 @@ final class SciClient
         $response = $this->request(array(
             'func' => 'sci_create_order', 'amount' => $amount, 'system' => (string) $system['id'],
             'currency' => $currency, 'order_id' => (string) $order_id, 'comment' => $comment,
-        ));
+        ), PaymentCreationException::class);
         $data = $response['data'] ?? null;
         if (! is_array($data) || ! isset($data['url']) || ! is_string($data['url'])) {
             throw new InvalidResponseException('Payment creation response does not contain a URL.');
@@ -62,7 +62,7 @@ final class SciClient
 
     public function verify_ipn(string $private_hash): PaymentEvidence
     {
-        $response = $this->request(array( 'func' => 'sci_confirm_order', 'private_hash' => $private_hash ));
+        $response = $this->request(array( 'func' => 'sci_confirm_order', 'private_hash' => $private_hash ), WebhookVerificationException::class);
         $data = $response['data'] ?? null;
         if (! is_array($data)) {
             throw new WebhookVerificationException('Verification response has no evidence.');
@@ -81,7 +81,7 @@ final class SciClient
     }
 
     /** @param array<string, string> $payload @return array<string, mixed> */
-    private function request(array $payload): array
+    private function request(array $payload, string $provider_error_class): array
     {
         $payload += array( 'sci_id' => $this->shop_id, 'sci_key' => $this->shop_password, 'test' => $this->test_mode ? '1' : '0', 'domain' => '' );
         $response = wp_remote_post(self::ENDPOINT, array( 'timeout' => 20, 'redirection' => 0, 'sslverify' => true, 'body' => $payload ));
@@ -98,7 +98,10 @@ final class SciClient
             throw new InvalidResponseException('PayKassa returned malformed data.');
         }
         if (true === $decoded['error']) {
-            throw new WebhookVerificationException('PayKassa rejected the request.');
+            if (PaymentCreationException::class === $provider_error_class) {
+                throw new PaymentCreationException('PayKassa rejected the payment request.');
+            }
+            throw new WebhookVerificationException('PayKassa rejected the verification request.');
         }
         return $decoded;
     }

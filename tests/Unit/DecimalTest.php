@@ -16,5 +16,7 @@ final class DecimalTest extends TestCase
         self::assertFalse(Decimal::equal('1.00000001', '1'));
         self::assertFalse(Decimal::equal('1.0', '1e0'));
         self::assertFalse(Decimal::equal('1.0', '-1.0'));
+        self::assertFalse(Decimal::equal('abc', 'def'));
+        self::assertFalse(Decimal::equal('', ''));
     }
 }

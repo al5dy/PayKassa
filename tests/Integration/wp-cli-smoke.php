@@ -151,6 +151,22 @@ try {
     $mismatch = wc_get_order($mismatch->get_id());
     paykassa_smoke_assert(! $mismatch_result['accepted'] && $mismatch instanceof WC_Order && PaymentState::MANUAL_REVIEW === $mismatch->get_meta(OrderMeta::STATE, true) && ! $mismatch->has_status(wc_get_is_paid_statuses()), 'Wrong amount must not settle the order and must enter manual review.');
 
+    $recovery = paykassa_smoke_order();
+    $orders[] = $recovery->get_id();
+    $_POST['paykassa_system'] = 'bitcoin';
+    paykassa_smoke_assert('success' === $gateway->process_payment($recovery->get_id())['result'], 'Recovery fixture invoice must be created.');
+    $active_order_id = $recovery->get_id();
+    $recovery_evidence = $client->verify_ipn('valid-private-hash-for-recovery');
+    $transactions[] = $recovery_evidence->transaction_id;
+    // Simulate a fatal exactly after durable PayKassa metadata save and before
+    // WC_Order::payment_complete(). Redelivery must resume, not reject PAID→PAID.
+    $recovery->update_meta_data(OrderMeta::STATE, PaymentState::PAID);
+    $recovery->update_meta_data(OrderMeta::TRANSACTION, $recovery_evidence->transaction_id);
+    $recovery->save();
+    $recovery_result = $processor->process($recovery_evidence);
+    $recovery = wc_get_order($recovery->get_id());
+    paykassa_smoke_assert($recovery_result['accepted'] && $recovery instanceof WC_Order && $recovery->has_status(wc_get_is_paid_statuses()), 'A webhook redelivery must recover settlement after save() before payment_complete().');
+
     $late = paykassa_smoke_order();
     $orders[] = $late->get_id();
     $_POST['paykassa_system'] = 'bitcoin';
@@ -174,7 +190,7 @@ try {
     $events_table = $wpdb->prefix . 'paykassa_events';
     $wpdb->query($wpdb->prepare("UPDATE {$events_table} SET lease_expires_at = DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 SECOND) WHERE event_key = %s", $first_reservation->event_key));
     $reclaimed = $store->acquire($lease_transaction, 'fingerprint', $order->get_id(), $lease_context, 'test');
-    paykassa_smoke_assert($reclaimed->acquired() && $store->begin_settlement($reclaimed->event_key) && $store->finish($reclaimed->event_key, 'processed'), 'Expired webhook lease must be safely reclaimed and finalized.');
+    paykassa_smoke_assert($reclaimed->acquired() && ! $store->begin_settlement($first_reservation->event_key, $first_reservation->owner_token) && $store->begin_settlement($reclaimed->event_key, $reclaimed->owner_token) && ! $store->finish($reclaimed->event_key, $first_reservation->owner_token, 'processed') && $store->finish($reclaimed->event_key, $reclaimed->owner_token, 'processed'), 'Expired webhook lease must fence a stale worker and allow only the new owner to finalize.');
 
     $concurrent_order = paykassa_smoke_order();
     $orders[] = $concurrent_order->get_id();

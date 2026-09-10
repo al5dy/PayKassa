@@ -30,6 +30,7 @@ final class Installer
 		environment varchar(8) NOT NULL,
 		event_type varchar(32) NOT NULL,
 		status varchar(32) NOT NULL,
+		owner_token char(64) NULL,
 			lease_expires_at datetime NULL,
 			attempts smallint(5) unsigned NOT NULL DEFAULT 0,
 		source varchar(32) NOT NULL DEFAULT 'webhook',
@@ -45,6 +46,7 @@ final class Installer
         $invoice_sql = "CREATE TABLE {$invoice_table} (
 		order_id bigint(20) unsigned NOT NULL,
 		status varchar(16) NOT NULL,
+		owner_token char(64) NULL,
 		snapshot_hash char(64) NULL,
 		lease_expires_at datetime NULL,
 		attempts smallint(5) unsigned NOT NULL DEFAULT 0,
@@ -76,7 +78,7 @@ final class Installer
         $columns = $wpdb->get_col("SHOW COLUMNS FROM {$events}", 0);
         $indexes = $wpdb->get_results("SHOW INDEX FROM {$events}", 'ARRAY_A');
         $lock_columns = $wpdb->get_col("SHOW COLUMNS FROM {$locks}", 0);
-        if (! is_array($columns) || ! is_array($lock_columns) || ! is_array($indexes) || array_diff(array( 'event_key', 'lease_expires_at', 'attempts', 'merchant_context', 'environment', 'source' ), $columns) || array_diff(array( 'order_id', 'status', 'lease_expires_at', 'attempts' ), $lock_columns)) {
+        if (! is_array($columns) || ! is_array($lock_columns) || ! is_array($indexes) || array_diff(array( 'event_key', 'lease_expires_at', 'attempts', 'merchant_context', 'environment', 'source', 'owner_token' ), $columns) || array_diff(array( 'order_id', 'status', 'lease_expires_at', 'attempts', 'owner_token' ), $lock_columns)) {
             return false;
         }
         $has_event_key = false;

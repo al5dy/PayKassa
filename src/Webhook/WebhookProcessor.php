@@ -41,19 +41,19 @@ final class WebhookProcessor
             $status = $this->events->status($reservation->event_key);
             return in_array($status, array('processed', 'duplicate', 'manual_review'), true) ? $this->ack($order) : $this->retry();
         }
-        if (! $this->events->begin_settlement($reservation->event_key)) {
+        if (! $this->events->begin_settlement($reservation->event_key, $reservation->owner_token)) {
             return $this->retry();
         }
 
         try {
             if (! $this->matches($snapshot, $evidence, $order)) {
                 $this->mark_manual_review($order, __('PayKassa verified a payment that does not match the immutable invoice snapshot. Manual review required.', 'paykassa'));
-                return $this->finished($reservation->event_key, 'rejected', 'payment_mismatch', false, $order);
+                return $this->finished($reservation->event_key, $reservation->owner_token, 'rejected', 'payment_mismatch', false, $order);
             }
             $stored_transaction = (string) $order->get_meta(OrderMeta::TRANSACTION, true);
             if ($order->has_status(wc_get_is_paid_statuses())) {
                 if ('' !== $stored_transaction && hash_equals($stored_transaction, $evidence->transaction_id)) {
-                    return $this->finished($reservation->event_key, 'duplicate', '', true, $order);
+                    return $this->finished($reservation->event_key, $reservation->owner_token, 'duplicate', '', true, $order);
                 }
                 // A distinct, verified transaction for an already-paid order is
                 // evidence of a duplicate/overpayment, not a harmless retry.
@@ -61,30 +61,35 @@ final class WebhookProcessor
                 $order->update_meta_data('_paykassa_manual_review_reason', 'additional_provider_transaction');
                 $this->mark_manual_review($order, __('PayKassa reported an additional verified payment for an already paid order. Manual financial review is required.', 'paykassa'));
                 do_action('paykassa_payment_conflict', $order, $evidence);
-                return $this->finished($reservation->event_key, 'manual_review', 'additional_transaction', true, $order);
+                return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', 'additional_transaction', true, $order);
             }
             if ($order->has_status('cancelled')) {
                 $this->mark_manual_review($order, __('PayKassa confirmed a payment after this order was cancelled. Funds were not ignored; manual review is required before fulfilment.', 'paykassa'));
                 do_action('paykassa_payment_conflict', $order, $evidence);
-                return $this->finished($reservation->event_key, 'manual_review', 'late_cancelled_payment', true, $order);
+                return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', 'late_cancelled_payment', true, $order);
             }
 
-            PaymentState::assert_transition((string) $order->get_meta(OrderMeta::STATE, true), PaymentState::PAID);
-            $order->update_meta_data(OrderMeta::TRANSACTION, $evidence->transaction_id);
-            $order->update_meta_data(OrderMeta::HASH_FINGERPRINT, $evidence->hash_fingerprint);
-            $order->update_meta_data(OrderMeta::LAST_WEBHOOK, gmdate('c'));
-            $order->update_meta_data(OrderMeta::STATE, PaymentState::PAID);
-            $order->update_meta_data('_paykassa_provider_amount', $evidence->amount);
-            $order->update_meta_data('_paykassa_payment_address', $evidence->address);
-            $order->update_meta_data('_paykassa_tag', $evidence->tag);
-            $order->save();
+            // This exact state is the recoverable boundary: if PHP died after
+            // save() but before payment_complete(), a reclaimed event with the
+            // same transaction resumes the WC settlement below.
+            if (! (PaymentState::PAID === (string) $order->get_meta(OrderMeta::STATE, true) && hash_equals($stored_transaction, $evidence->transaction_id))) {
+                PaymentState::assert_transition((string) $order->get_meta(OrderMeta::STATE, true), PaymentState::PAID);
+                $order->update_meta_data(OrderMeta::TRANSACTION, $evidence->transaction_id);
+                $order->update_meta_data(OrderMeta::HASH_FINGERPRINT, $evidence->hash_fingerprint);
+                $order->update_meta_data(OrderMeta::LAST_WEBHOOK, gmdate('c'));
+                $order->update_meta_data(OrderMeta::STATE, PaymentState::PAID);
+                $order->update_meta_data('_paykassa_provider_amount', $evidence->amount);
+                $order->update_meta_data('_paykassa_payment_address', $evidence->address);
+                $order->update_meta_data('_paykassa_tag', $evidence->tag);
+                $order->save();
+            }
             // WooCommerce itself is responsible for stock and only executes its
             // payment lifecycle once the order is not yet paid.
             $order->payment_complete($evidence->transaction_id);
             $order->add_order_note(__('PayKassa payment confirmed by provider verification.', 'paykassa'));
             $this->logger->log('info', 'payment_confirmed', array('order_id' => $order->get_id(), 'transaction_id' => $evidence->transaction_id, 'state' => PaymentState::PAID));
             do_action('paykassa_payment_confirmed', $order, $evidence);
-            return $this->finished($reservation->event_key, 'processed', '', true, $order);
+            return $this->finished($reservation->event_key, $reservation->owner_token, 'processed', '', true, $order);
         } catch (\Throwable $exception) {
             // Do not finish: the lease lets a subsequent provider delivery resume
             // safely. No acknowledgement is sent for an uncertain settlement.
@@ -103,9 +108,9 @@ final class WebhookProcessor
         return array('accepted' => false, 'ack' => '');
     }
 
-    private function finished(string $event_key, string $status, string $error, bool $accepted, \WC_Order $order): array
+    private function finished(string $event_key, string $owner_token, string $status, string $error, bool $accepted, \WC_Order $order): array
     {
-        if (! $this->events->finish($event_key, $status, $error)) {
+        if (! $this->events->finish($event_key, $owner_token, $status, $error)) {
             return $this->retry();
         }
         return $accepted ? $this->ack($order) : $this->retry();
@@ -116,6 +121,7 @@ final class WebhookProcessor
         $legacy_settings = get_option('woocommerce_paykassa_settings', array());
         $expected_shop = '' !== $snapshot->merchant_shop_id ? $snapshot->merchant_shop_id : (is_array($legacy_settings) ? (string) ($legacy_settings['shop_id'] ?? '') : '');
         return $snapshot->order_id === $order->get_id()
+            && Decimal::equal($snapshot->expected_amount, (string) $order->get_total())
             && Decimal::equal($snapshot->expected_amount, $evidence->amount)
             && strtoupper($snapshot->provider_currency) === strtoupper($evidence->currency)
             && strtolower($snapshot->provider_system) === strtolower($evidence->system)

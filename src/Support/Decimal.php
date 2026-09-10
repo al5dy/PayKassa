@@ -9,7 +9,9 @@ final class Decimal
 {
     public static function equal(string $left, string $right): bool
     {
-        return self::normalise($left) === self::normalise($right);
+        $normal_left = self::normalise($left);
+        $normal_right = self::normalise($right);
+        return '' !== $normal_left && '' !== $normal_right && $normal_left === $normal_right;
     }
 
     public static function normalise(string $amount): string
