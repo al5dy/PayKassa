@@ -54,3 +54,7 @@ cp "$base_dir/tests/fixtures/disposable-site.php" "$site_dir/wp-content/mu-plugi
 "${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-schema-upgrade.php" --use-include
 "${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-upgrade-smoke.php" --use-include
 "${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-smoke.php" --use-include
+for hpos in no yes; do
+    "${wp_cli[@]}" option update woocommerce_custom_orders_table_enabled "$hpos"
+    PAYKASSA_EXPECT_HPOS="$hpos" "${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-reconciliation.php" --use-include
+done

@@ -51,10 +51,10 @@ final class WebhookEventStore
         }
 
         $existing = $wpdb->get_row($wpdb->prepare(
-            "SELECT status FROM {$table} WHERE event_key = %s",
+            "SELECT status, order_id FROM {$table} WHERE event_key = %s",
             $key
         ));
-        if (!is_object($existing) || !isset($existing->status)) {
+        if (!is_object($existing) || !isset($existing->status, $existing->order_id) || (int) $existing->order_id !== $order_id) {
             return new EventReservation(EventReservation::ERROR, $key);
         }
 

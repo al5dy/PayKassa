@@ -122,7 +122,7 @@ try {
     $active_order_id = $wrong_merchant->get_id();
     $wrong_merchant_evidence = $client->verify_ipn('valid-private-hash-for-wrong-merchant');
     $transactions[] = $wrong_merchant_evidence->transaction_id;
-    $wrong_merchant_evidence = new PaymentEvidence($wrong_merchant_evidence->order_id, $wrong_merchant_evidence->transaction_id, $wrong_merchant_evidence->hash_fingerprint, $wrong_merchant_evidence->amount, $wrong_merchant_evidence->currency, $wrong_merchant_evidence->system, $wrong_merchant_evidence->address, $wrong_merchant_evidence->tag, 'another-merchant', $wrong_merchant_evidence->payment_link_hash);
+    $wrong_merchant_evidence = new PaymentEvidence($wrong_merchant_evidence->order_id, $wrong_merchant_evidence->transaction_id, $wrong_merchant_evidence->hash_fingerprint, $wrong_merchant_evidence->amount, $wrong_merchant_evidence->currency, $wrong_merchant_evidence->system, $wrong_merchant_evidence->address, $wrong_merchant_evidence->tag, 'another-merchant', $wrong_merchant_evidence->payment_link_hash, $wrong_merchant_evidence->environment);
     $wrong_merchant_result = $processor->process($wrong_merchant_evidence);
     $wrong_merchant = wc_get_order($wrong_merchant->get_id());
     paykassa_smoke_assert(! $wrong_merchant_result['accepted'] && $wrong_merchant instanceof WC_Order && PaymentState::MANUAL_REVIEW === $wrong_merchant->get_meta(OrderMeta::STATE, true) && ! $wrong_merchant->has_status(wc_get_is_paid_statuses()), 'Wrong merchant must not settle the order.');
@@ -134,7 +134,7 @@ try {
     $active_order_id = $wrong_hash->get_id();
     $wrong_hash_evidence = $client->verify_ipn('valid-private-hash-for-wrong-hash');
     $transactions[] = $wrong_hash_evidence->transaction_id;
-    $wrong_hash_evidence = new PaymentEvidence($wrong_hash_evidence->order_id, $wrong_hash_evidence->transaction_id, $wrong_hash_evidence->hash_fingerprint, $wrong_hash_evidence->amount, $wrong_hash_evidence->currency, $wrong_hash_evidence->system, $wrong_hash_evidence->address, $wrong_hash_evidence->tag, $wrong_hash_evidence->shop_id, str_repeat('a', 64));
+    $wrong_hash_evidence = new PaymentEvidence($wrong_hash_evidence->order_id, $wrong_hash_evidence->transaction_id, $wrong_hash_evidence->hash_fingerprint, $wrong_hash_evidence->amount, $wrong_hash_evidence->currency, $wrong_hash_evidence->system, $wrong_hash_evidence->address, $wrong_hash_evidence->tag, $wrong_hash_evidence->shop_id, str_repeat('a', 64), $wrong_hash_evidence->environment);
     $wrong_hash_result = $processor->process($wrong_hash_evidence);
     $wrong_hash = wc_get_order($wrong_hash->get_id());
     paykassa_smoke_assert(! $wrong_hash_result['accepted'] && $wrong_hash instanceof WC_Order && PaymentState::MANUAL_REVIEW === $wrong_hash->get_meta(OrderMeta::STATE, true) && ! $wrong_hash->has_status(wc_get_is_paid_statuses()), 'Wrong payment-link hash must not settle the order.');

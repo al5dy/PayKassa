@@ -48,6 +48,7 @@ add_action(
 );
 
 register_activation_hook( __FILE__, array( '\\Al5dy\\PayKassaWoo\\Infrastructure\\Installer', 'activate' ) );
+register_deactivation_hook( __FILE__, array( '\\Al5dy\\PayKassaWoo\\Reconciliation\\ReconciliationScheduler', 'unschedule' ) );
 
 add_action(
 	'plugins_loaded',

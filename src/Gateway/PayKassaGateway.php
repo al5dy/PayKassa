@@ -41,6 +41,7 @@ final class PayKassaGateway extends \WC_Payment_Gateway
             'api_id' => array( 'title' => __('API ID (optional)', 'paykassa'), 'type' => 'text', 'description' => __('Only required for connection tests and payment recovery.', 'paykassa') ),
             'api_password' => array( 'title' => __('API password (optional)', 'paykassa'), 'type' => 'paykassa_secret', 'description' => __('Leave blank when saving to keep the current secret.', 'paykassa') ),
             'reconciliation_enabled' => array( 'title' => __('Payment recovery', 'paykassa'), 'type' => 'checkbox', 'label' => __('Enable bounded background reconciliation when API credentials are configured', 'paykassa'), 'default' => 'no' ),
+            'reconciliation_backfill_days' => array('title' => __('Initial recovery lookback (days)', 'paykassa'), 'type' => 'select', 'options' => array('7' => '7', '30' => '30', '90' => '90', '365' => '365'), 'default' => '30', 'description' => __('Later runs resume saved progress, including after a long outage. History records without an SCI verification token require review; they are never credited from history alone.', 'paykassa')),
             'debug' => array( 'title' => __('Debug logging', 'paykassa'), 'type' => 'checkbox', 'label' => __('Write redacted diagnostic logs', 'paykassa'), 'default' => 'no' ),
             'delete_data_on_uninstall' => array( 'title' => __('Uninstall cleanup', 'paykassa'), 'type' => 'checkbox', 'label' => __('Delete plugin settings and webhook audit data on uninstall', 'paykassa'), 'default' => 'no' ),
         );

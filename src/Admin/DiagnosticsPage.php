@@ -6,6 +6,7 @@ namespace Al5dy\PayKassaWoo\Admin;
 
 use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
+use Al5dy\PayKassaWoo\Reconciliation\ReconciliationService;
 
 final class DiagnosticsPage
 {
@@ -60,7 +61,18 @@ final class DiagnosticsPage
             'API credentials configured' => ( '' !== ( $settings['api_id'] ?? '' ) && '' !== ( $settings['api_password'] ?? '' ) ) ? __('Yes', 'paykassa') : __('No', 'paykassa'),
             'Legacy callback URL' => add_query_arg('wc-api', 'wc_gateway_paykassa', home_url('/')),
             'Last reconciliation' => get_option('paykassa_last_reconciliation', __('Never', 'paykassa')),
+            __('Last completed history scan', 'paykassa') => get_option('paykassa_last_history_scan', __('Never', 'paykassa')),
+            __('Last recovery error', 'paykassa') => get_option('paykassa_last_reconciliation_error', __('Never', 'paykassa')),
         );
+        $recovery = get_option(ReconciliationService::REPORT_OPTION, array());
+        if (is_array($recovery)) {
+            foreach (array('status' => __('Recovery status', 'paykassa'), 'checked' => __('History records checked', 'paykassa'), 'recovered' => __('Payments recovered', 'paykassa'), 'duplicate' => __('Duplicate payments ignored', 'paykassa'), 'manual_review' => __('Payments requiring manual review', 'paykassa'), 'unverifiable' => __('History records without sufficient verification', 'paykassa')) as $key => $label) {
+                $value = $recovery[$key] ?? '';
+                if (is_string($value) || is_int($value)) {
+                    $report[$label] = $value;
+                }
+            }
+        }
         echo '<div class="wrap"><h1>' . esc_html__('PayKassa payment health', 'paykassa') . '</h1>';
         $connection_key = 'paykassa_connection_test_' . get_current_user_id();
         $result = get_transient($connection_key);

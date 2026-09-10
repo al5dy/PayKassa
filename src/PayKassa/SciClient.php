@@ -12,6 +12,7 @@ use Al5dy\PayKassaWoo\PayKassa\Exception\InvalidResponseException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\PaymentCreationException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\ProviderUnavailableException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\WebhookVerificationException;
+use Al5dy\PayKassaWoo\Support\Decimal;
 
 /** Adapter for the documented PayKassa SCI 0.4 contract, using WP's TLS transport. */
 final class SciClient
@@ -67,9 +68,21 @@ final class SciClient
         if (! is_array($data)) {
             throw new WebhookVerificationException('Verification response has no evidence.');
         }
+        foreach (array('order_id', 'transaction', 'shop_id', 'amount', 'currency', 'system', 'hash') as $key) {
+            if (! isset($data[$key]) || ! is_string($data[$key]) || '' === $data[$key] || strlen($data[$key]) > 128) {
+                // JSON numbers can lose crypto precision. Financial evidence
+                // must use the documented string representation.
+                throw new WebhookVerificationException('Verification response has invalid field types.');
+            }
+        }
+        foreach (array('address', 'tag') as $key) {
+            if (isset($data[$key]) && (! is_string($data[$key]) || strlen($data[$key]) > 256)) {
+                throw new WebhookVerificationException('Verification response has invalid address data.');
+            }
+        }
         $order_id = filter_var($data['order_id'] ?? null, FILTER_VALIDATE_INT, array( 'options' => array( 'min_range' => 1 ) ));
         $transaction = isset($data['transaction']) ? (string) $data['transaction'] : '';
-        $amount = isset($data['amount']) ? (string) $data['amount'] : '';
+        $amount = isset($data['amount']) && is_string($data['amount']) ? $data['amount'] : '';
         $currency = isset($data['currency']) ? strtoupper((string) $data['currency']) : '';
         $system = isset($data['system']) ? (string) $data['system'] : '';
         $shop_id = isset($data['shop_id']) ? (string) $data['shop_id'] : '';
@@ -77,7 +90,10 @@ final class SciClient
         if (false === $order_id || '' === $transaction || '' === $amount || '' === $currency || '' === $system || '' === $shop_id || '' === $payment_link_hash) {
             throw new WebhookVerificationException('Verification response is incomplete.');
         }
-        return new PaymentEvidence((int) $order_id, $transaction, Logger::fingerprint($private_hash), $amount, $currency, $system, (string) ( $data['address'] ?? '' ), (string) ( $data['tag'] ?? '' ), $shop_id, $payment_link_hash);
+        if (! Decimal::equal($amount, $amount) || Decimal::equal($amount, '0') || 'no' !== ($data['partial'] ?? null)) {
+            throw new WebhookVerificationException('Partial or ambiguous payment evidence cannot settle automatically.');
+        }
+        return new PaymentEvidence((int) $order_id, $transaction, Logger::fingerprint($private_hash), $amount, $currency, $system, (string) ( $data['address'] ?? '' ), (string) ( $data['tag'] ?? '' ), $shop_id, $payment_link_hash, $this->test_mode ? 'test' : 'live');
     }
 
     /** @param array<string, string> $payload @return array<string, mixed> */
@@ -93,8 +109,8 @@ final class SciClient
         if ($code < 200 || $code > 299) {
             throw new ProviderUnavailableException('PayKassa returned an unavailable response.');
         }
-        $decoded = json_decode((string) wp_remote_retrieve_body($response), true);
-        if (! is_array($decoded) || ! isset($decoded['error'], $decoded['message'])) {
+        $decoded = json_decode((string) wp_remote_retrieve_body($response), true, 32, JSON_BIGINT_AS_STRING);
+        if (! is_array($decoded) || ! isset($decoded['error'], $decoded['message']) || ! is_bool($decoded['error'])) {
             throw new InvalidResponseException('PayKassa returned malformed data.');
         }
         if (true === $decoded['error']) {

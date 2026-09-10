@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PayKassa\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/paykassa\n"
-"POT-Creation-Date: 2026-09-10T17:42:55+02:00\n"
+"POT-Creation-Date: 2026-09-10T23:25:16+02:00\n"
 "PO-Revision-Date: 2018-03-29 00:20+0300\n"
 "Last-Translator: Anton Lokotkov (ziscod) <fakeemail@fakeemail.com>\n"
 "Language-Team: Ziscod\n"
@@ -34,243 +34,360 @@ msgstr ""
 msgid "al5dy"
 msgstr ""
 
-#: src/Admin/OrderMetaBox.php:18
+#: src/Admin/DiagnosticsPage.php:21
+#, fuzzy
+msgid "PayKassa health"
+msgstr "Песочница"
+
+#: src/Admin/DiagnosticsPage.php:27
+msgid "You are not allowed to run this check."
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:56
+msgid "Not active"
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:58 src/Admin/DiagnosticsPage.php:60
+#: src/Admin/DiagnosticsPage.php:61
+msgid "Yes"
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:58 src/Admin/DiagnosticsPage.php:60
+#: src/Admin/DiagnosticsPage.php:61
+msgid "No"
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:59
+msgid "Test"
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:59
+msgid "Live"
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:63 src/Admin/DiagnosticsPage.php:64
+#: src/Admin/DiagnosticsPage.php:65
+msgid "Never"
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:64
+msgid "Last completed history scan"
+msgstr "Последняя завершённая проверка истории"
+
+#: src/Admin/DiagnosticsPage.php:65
+msgid "Last recovery error"
+msgstr "Последняя ошибка восстановления платежей"
+
+#: src/Admin/DiagnosticsPage.php:69
+msgid "Recovery status"
+msgstr "Состояние восстановления платежей"
+
+#: src/Admin/DiagnosticsPage.php:69
+msgid "History records checked"
+msgstr "Проверено записей истории"
+
+#: src/Admin/DiagnosticsPage.php:69
+msgid "Payments recovered"
+msgstr "Восстановлено платежей"
+
+#: src/Admin/DiagnosticsPage.php:69
+msgid "Duplicate payments ignored"
+msgstr "Повторных событий без повторного зачисления"
+
+#: src/Admin/DiagnosticsPage.php:69
+msgid "Payments requiring manual review"
+msgstr "Платежей, требующих ручной проверки"
+
+#: src/Admin/DiagnosticsPage.php:69
+msgid "History records without sufficient verification"
+msgstr "Записей истории без достаточных данных для проверки"
+
+#: src/Admin/DiagnosticsPage.php:76
+msgid "PayKassa payment health"
+msgstr "Диагностика платежей PayKassa"
+
+#: src/Admin/DiagnosticsPage.php:80
+msgid "Connected: PayKassa API credentials were accepted."
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:80
+msgid "Connection failed. Check API credentials or PayKassa availability."
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:80
+msgid ""
+"Add API credentials to run the read-only connection test. SCI credentials "
+"have no documented read-only test."
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:89
+msgid "Test API connection"
+msgstr ""
+
+#: src/Admin/OrderMetaBox.php:22
 #, fuzzy
 msgid "Payment state"
 msgstr "Оплата завершена"
 
-#: src/Admin/OrderMetaBox.php:19
+#: src/Admin/OrderMetaBox.php:23
 #, fuzzy
 msgid "PayKassa transaction"
 msgstr "Песочница"
 
-#: src/Admin/OrderMetaBox.php:20
+#: src/Admin/OrderMetaBox.php:24
 msgid "Invoice"
 msgstr ""
 
-#: src/Admin/OrderMetaBox.php:21
+#: src/Admin/OrderMetaBox.php:25
 msgid "Network"
 msgstr ""
 
-#: src/Admin/OrderMetaBox.php:22
+#: src/Admin/OrderMetaBox.php:26
 msgid "Amount"
 msgstr ""
 
-#: src/Admin/OrderMetaBox.php:23
+#: src/Admin/OrderMetaBox.php:27
 #, fuzzy
 msgid "Payment address"
 msgstr "Ожидание выплаты"
 
-#: src/Admin/OrderMetaBox.php:24
+#: src/Admin/OrderMetaBox.php:28
 msgid "Tag / memo"
 msgstr ""
 
-#: src/Admin/OrderMetaBox.php:25
+#: src/Admin/OrderMetaBox.php:29
 msgid "Last webhook"
 msgstr ""
 
-#: src/Admin/OrderMetaBox.php:26
+#: src/Admin/OrderMetaBox.php:30
 msgid "Environment"
 msgstr ""
 
-#: src/Admin/OrderMetaBox.php:28
+#: src/Admin/OrderMetaBox.php:32
 #, fuzzy
 msgid "PayKassa payment"
 msgstr "Песочница"
 
-#: src/Admin/SiteHealth.php:12
+#: src/Admin/SiteHealth.php:16
 msgid "PayKassa payment configuration"
 msgstr ""
 
-#: src/Admin/SiteHealth.php:20
+#: src/Admin/SiteHealth.php:25
 msgid "PayKassa needs merchant credentials"
 msgstr ""
 
-#: src/Admin/SiteHealth.php:20
+#: src/Admin/SiteHealth.php:25
 msgid "The gateway is enabled but its merchant credentials are incomplete."
 msgstr ""
 
-#: src/Admin/SiteHealth.php:23
+#: src/Admin/SiteHealth.php:28
 msgid "PayKassa needs HTTPS in live mode"
 msgstr ""
 
-#: src/Admin/SiteHealth.php:23
+#: src/Admin/SiteHealth.php:28
 msgid "Enable HTTPS before accepting live cryptocurrency payments."
 msgstr ""
 
-#: src/Admin/SiteHealth.php:25
+#: src/Admin/SiteHealth.php:30
 #, fuzzy
 msgid "PayKassa configuration looks ready"
 msgstr "PayKassa шлюз"
 
-#: src/Admin/SiteHealth.php:25
+#: src/Admin/SiteHealth.php:30
 msgid "No credentials or HTTPS issue was detected."
 msgstr ""
 
-#: src/Blocks/PayKassaPaymentMethod.php:40 src/Gateway/PayKassaGateway.php:23
-#: src/Gateway/PayKassaGateway.php:31 assets/build/blocks.js:4
+#: src/Blocks/PayKassaPaymentMethod.php:43 src/Gateway/PayKassaGateway.php:26
+#: src/Gateway/PayKassaGateway.php:35 assets/build/blocks.js:4
 msgid "Cryptocurrency (PayKassa)"
 msgstr ""
 
-#: src/Blocks/PayKassaPaymentMethod.php:41 src/Gateway/PayKassaGateway.php:24
-#: src/Gateway/PayKassaGateway.php:32
+#: src/Blocks/PayKassaPaymentMethod.php:44 src/Gateway/PayKassaGateway.php:27
+#: src/Gateway/PayKassaGateway.php:36
 msgid "Pay securely with cryptocurrency through PayKassa."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:16
+#: src/Gateway/PayKassaGateway.php:19
 msgid "PayKassa"
 msgstr "PayKassa"
 
-#: src/Gateway/PayKassaGateway.php:17
+#: src/Gateway/PayKassaGateway.php:20
 msgid "Provider-verified cryptocurrency payments through PayKassa."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:30
+#: src/Gateway/PayKassaGateway.php:34
 msgid "Enable/Disable"
 msgstr "Включить/Выключить"
 
-#: src/Gateway/PayKassaGateway.php:30
+#: src/Gateway/PayKassaGateway.php:34
 #, fuzzy
 msgid "Enable PayKassa"
 msgstr "Включить тестовый режим"
 
-#: src/Gateway/PayKassaGateway.php:31
+#: src/Gateway/PayKassaGateway.php:35
 msgid "Title"
 msgstr "Название"
 
-#: src/Gateway/PayKassaGateway.php:32
+#: src/Gateway/PayKassaGateway.php:36
 msgid "Description"
 msgstr "Описание"
 
-#: src/Gateway/PayKassaGateway.php:33
+#: src/Gateway/PayKassaGateway.php:37
 msgid "Merchant / Shop ID"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:33
+#: src/Gateway/PayKassaGateway.php:37
 msgid "Your PayKassa SCI merchant identifier."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:34
+#: src/Gateway/PayKassaGateway.php:38
 msgid "Merchant secret"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:34 src/Gateway/PayKassaGateway.php:38
+#: src/Gateway/PayKassaGateway.php:38 src/Gateway/PayKassaGateway.php:42
 msgid "Leave blank when saving to keep the current secret."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:35
+#: src/Gateway/PayKassaGateway.php:39
 msgid "Test mode"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:35
+#: src/Gateway/PayKassaGateway.php:39
 #, fuzzy
 msgid "Use PayKassa test mode"
 msgstr "Включить оплату по PayKassa"
 
-#: src/Gateway/PayKassaGateway.php:36
+#: src/Gateway/PayKassaGateway.php:40
 msgid "Enabled payment networks"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:36
+#: src/Gateway/PayKassaGateway.php:40
 msgid ""
 "Comma-separated current PayKassa system keys (for example bitcoin,tron_trc20,"
 "ton). Leave empty to enable documented crypto directions compatible with the "
 "order currency."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:37
+#: src/Gateway/PayKassaGateway.php:41
 msgid "API ID (optional)"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:37
+#: src/Gateway/PayKassaGateway.php:41
 msgid "Only required for connection tests and payment recovery."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:38
+#: src/Gateway/PayKassaGateway.php:42
 #, fuzzy
 msgid "API password (optional)"
 msgstr "Пароль магазина"
 
-#: src/Gateway/PayKassaGateway.php:39
-#, fuzzy
+#: src/Gateway/PayKassaGateway.php:43
 msgid "Payment recovery"
-msgstr "Оплата завершена"
+msgstr "Восстановление платежей"
 
-#: src/Gateway/PayKassaGateway.php:39
+#: src/Gateway/PayKassaGateway.php:43
 msgid ""
 "Enable bounded background reconciliation when API credentials are configured"
-msgstr ""
+msgstr "Включить фоновую сверку платежей ограниченными пакетами при настроенных ключах API"
 
-#: src/Gateway/PayKassaGateway.php:40
+#: src/Gateway/PayKassaGateway.php:44
+msgid "Initial recovery lookback (days)"
+msgstr "Глубина первой проверки истории (дни)"
+
+#: src/Gateway/PayKassaGateway.php:44
+msgid ""
+"Later runs resume saved progress, including after a long outage. History "
+"records without an SCI verification token require review; they are never "
+"credited from history alone."
+msgstr "Повторные запуски продолжают сохранённую проверку, в том числе после длительного сбоя. Записи без токена SCI требуют разбора: платежи никогда не зачисляются только на основании истории."
+
+#: src/Gateway/PayKassaGateway.php:45
 msgid "Debug logging"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:40
+#: src/Gateway/PayKassaGateway.php:45
 msgid "Write redacted diagnostic logs"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:41
+#: src/Gateway/PayKassaGateway.php:46
 msgid "Uninstall cleanup"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:41
+#: src/Gateway/PayKassaGateway.php:46
 msgid "Delete plugin settings and webhook audit data on uninstall"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:71 assets/build/blocks.js:17
+#: src/Gateway/PayKassaGateway.php:97 assets/build/blocks.js:17
 msgid "Cryptocurrency network"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:83
+#: src/Gateway/PayKassaGateway.php:110
 msgid "Choose an available PayKassa cryptocurrency network."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:93
+#: src/Gateway/PayKassaGateway.php:121
 msgid "We could not find this order."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:104
+#: src/Gateway/PayKassaGateway.php:132
 msgid ""
 "PayKassa payment creation failed. See redacted PayKassa logs for correlation "
 "details."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:105
+#: src/Gateway/PayKassaGateway.php:133
 msgid ""
 "We could not start the PayKassa payment. Please try another method or "
 "contact the store."
 msgstr ""
 
-#: src/Order/OrderPaymentService.php:42
+#: src/Order/OrderPaymentService.php:88
 msgid "PayKassa payment invoice created; awaiting provider confirmation."
 msgstr ""
 
-#: src/Support/Requirements.php:21
+#: src/Plugin.php:28
+msgid ""
+"PayKassa could not verify its payment-event database schema. The gateway "
+"remains disabled; please retry the migration from WooCommerce status tools."
+msgstr ""
+
+#: src/Support/Requirements.php:25
 msgid ""
 "PayKassa for WooCommerce requires PHP 8.1+, WordPress 6.6+, and WooCommerce "
 "8.5+."
 msgstr ""
 
-#: src/Webhook/WebhookProcessor.php:28
+#: src/Webhook/WebhookProcessor.php:80
 msgid ""
 "PayKassa verified a payment that does not match the immutable invoice "
 "snapshot. Manual review required."
 msgstr ""
 
-#: src/Webhook/WebhookProcessor.php:39
+#: src/Webhook/WebhookProcessor.php:99
+msgid ""
+"PayKassa reported an additional verified payment for a paid or settling "
+"order. Manual financial review is required."
+msgstr "PayKassa подтвердил дополнительный платёж для оплаченного или обрабатываемого заказа. Требуется ручная финансовая проверка."
+
+#: src/Webhook/WebhookProcessor.php:105
 msgid ""
 "PayKassa confirmed a payment after this order was cancelled. Funds were not "
 "ignored; manual review is required before fulfilment."
-msgstr ""
+msgstr "PayKassa подтвердил платёж после отмены заказа. Средства не проигнорированы; перед исполнением заказа требуется ручная проверка."
 
-#: src/Webhook/WebhookProcessor.php:52
+#: src/Webhook/WebhookProcessor.php:139
 msgid "PayKassa payment confirmed by provider verification."
-msgstr ""
+msgstr "Платёж PayKassa подтверждён проверкой у платёжного провайдера."
 
 #: assets/build/blocks.js:15
 #, fuzzy
 msgid "PayKassa payment options"
 msgstr "Настройки PayKassa"
+
+#: assets/build/blocks.js:23
+#, fuzzy
+msgid "Pay with PayKassa"
+msgstr "PayKassa"
 
 #~ msgid "Provide services of receiving payments on the website"
 #~ msgstr "Предоставляет услуги приема платежей на сайте"

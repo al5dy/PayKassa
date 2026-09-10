@@ -16,7 +16,8 @@ final class PaymentEvidence
         public readonly string $address = '',
         public readonly string $tag = '',
         public readonly string $shop_id = '',
-        public readonly string $payment_link_hash = ''
+        public readonly string $payment_link_hash = '',
+        public readonly string $environment = ''
     ) {
     }
 }
