@@ -8,6 +8,10 @@ if (! defined('PAYKASSA_TEST_DATABASE') || true !== PAYKASSA_TEST_DATABASE || ! 
     return;
 }
 
+if ('https' === strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))) {
+    $_SERVER['HTTPS'] = 'on';
+}
+
 add_action('init', static function (): void {
     if ('GET' === strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) && '1' === ($_GET['paykassa_browser_merchant_urls'] ?? null)) {
         $settings = get_option('woocommerce_paykassa_settings', array());
@@ -18,7 +22,26 @@ add_action('init', static function (): void {
             'success_return_url' => $urls->success_return_url(),
             'failure_return_url' => $urls->failure_return_url(),
             'transaction_notification_url' => $urls->transaction_notification_url(),
+            'callback_source' => $urls->server_callback_source(),
+            'browser_return_source' => $urls->browser_return_source(),
         ));
+    }
+    if (
+        'POST' === strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? ''))
+        && 'split' === ($_GET['paykassa_browser_url_scenario'] ?? null)
+        && 'paykassa-browser-fixture' === ($_POST['token'] ?? null)
+    ) {
+        $settings = get_option('woocommerce_paykassa_settings', array());
+        $callback_base = get_option('paykassa_browser_split_callback_base', '');
+        if (! is_array($settings) || ! is_string($callback_base) || '' === $callback_base) {
+            status_header(500);
+            exit;
+        }
+        $settings['external_base_url'] = $callback_base;
+        $settings['browser_return_base_url'] = '';
+        update_option('woocommerce_paykassa_settings', $settings, false);
+        status_header(204);
+        exit;
     }
     if (
         'POST' !== strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? ''))

@@ -51,6 +51,7 @@ $live_settings = array(
     'accepted_order_currencies' => array('USD'),
     'enabled_payment_directions' => array('ethereum_erc20:USDT', 'tron_trc20:USDT'),
     'external_base_url' => 'https://ocelot-dribble-creature.ngrok-free.dev/',
+    'browser_return_base_url' => 'https://ocelot-dribble-creature.ngrok-free.dev/',
     'minimum_payment_directions' => '',
     'debug' => 'no',
 );
@@ -59,6 +60,7 @@ $test_settings = array_replace($live_settings, array(
     'shop_password' => 'test-secret-only',
     'testmode' => 'yes',
     'external_base_url' => '',
+    'browser_return_base_url' => '',
 ));
 
 update_option('woocommerce_paykassa_settings', $live_settings, false);
@@ -219,10 +221,14 @@ try {
     }
     $urls = new MerchantEndpointUrls($live_settings);
     paykassa_endpoint_assert('https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa' === $urls->invoice_notification_url(), 'Invoice Merchant URL must use the external base override.');
-    paykassa_endpoint_assert(home_url('/?wc-api=wc_gateway_paykassa_return') === $urls->success_return_url(), 'Success Merchant URL must preserve the canonical WordPress origin for browser cookies.');
-    paykassa_endpoint_assert(home_url('/?wc-api=wc_gateway_paykassa_cancel') === $urls->failure_return_url(), 'Failure Merchant URL must preserve the canonical WordPress origin for browser cookies.');
+    paykassa_endpoint_assert('https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa_return' === $urls->success_return_url(), 'Success Merchant URL must use its independently configured public browser base.');
+    paykassa_endpoint_assert('https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa_cancel' === $urls->failure_return_url(), 'Failure Merchant URL must use its independently configured public browser base.');
     paykassa_endpoint_assert('https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa_transaction' === $urls->transaction_notification_url(), 'Transaction Merchant URL must use the external base override.');
-    paykassa_endpoint_assert(! str_contains($urls->success_return_url(), 'ngrok-free.dev') && ! str_contains($urls->failure_return_url(), 'ngrok-free.dev'), 'External callback override must never change browser return origins.');
+    $split_urls = new MerchantEndpointUrls(array_replace($live_settings, array('browser_return_base_url' => '')));
+    paykassa_endpoint_assert(home_url('/?wc-api=wc_gateway_paykassa_return') === $split_urls->success_return_url(), 'Empty browser return override must independently fall back to the canonical WordPress origin.');
+    paykassa_endpoint_assert(home_url('/?wc-api=wc_gateway_paykassa_cancel') === $split_urls->failure_return_url(), 'Split-origin failure return must preserve the canonical WordPress origin.');
+    paykassa_endpoint_assert($urls->server_callback_base_url() === $urls->browser_return_base_url(), 'Same-public-origin configuration must be supported explicitly.');
+    paykassa_endpoint_assert($split_urls->server_callback_base_url() !== $split_urls->browser_return_base_url(), 'Split callback/browser origin configuration must be supported explicitly.');
     wp_set_current_user(1);
     ob_start();
     (new DiagnosticsPage())->render();
@@ -232,6 +238,7 @@ try {
         paykassa_endpoint_assert(str_contains($diagnostics, $merchant_label), 'Diagnostics must show the exact PayKassa Merchant field label: ' . $merchant_label);
     }
     paykassa_endpoint_assert(! str_contains($diagnostics, 'Legacy callback URL') && str_contains($diagnostics, $urls->transaction_notification_url()), 'Diagnostics must remove the legacy label and show the generated transaction URL.');
+    paykassa_endpoint_assert(2 === substr_count($diagnostics, 'External override'), 'Diagnostics must report independent external sources for callback and browser return bases.');
     $original_https = $_SERVER['HTTPS'] ?? null;
     $_SERVER['HTTPS'] = 'on';
     $site_health = (new SiteHealth())->test_configuration();
@@ -240,9 +247,7 @@ try {
     } else {
         $_SERVER['HTTPS'] = $original_https;
     }
-    $home_scheme = wp_parse_url(home_url('/'), PHP_URL_SCHEME);
-    $expected_health = 'https' === $home_scheme ? 'good' : 'critical';
-    paykassa_endpoint_assert($expected_health === ($site_health['status'] ?? ''), 'Site Health must require HTTPS for both external callbacks and canonical browser returns in Live mode.');
+    paykassa_endpoint_assert('good' === ($site_health['status'] ?? ''), 'HTTPS callback and browser return overrides must pass Site Health in Live mode.');
 
     if (! WC()->session instanceof WC_Session) {
         WC()->session = new WC_Session_Handler();

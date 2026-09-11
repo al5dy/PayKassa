@@ -17,6 +17,7 @@ final class MerchantEndpointUrlsTest extends TestCase
         self::assertSame('https://store.example/shop/', $urls->server_callback_base_url());
         self::assertSame('https://store.example/shop/', $urls->browser_return_base_url());
         self::assertSame('wordpress_home', $urls->server_callback_source());
+        self::assertSame('wordpress_home', $urls->browser_return_source());
         self::assertTrue($urls->server_callbacks_use_https());
         self::assertTrue($urls->browser_returns_use_https());
         self::assertSame('https://store.example/shop/?wc-api=wc_gateway_paykassa', $urls->invoice_notification_url());
@@ -25,7 +26,7 @@ final class MerchantEndpointUrlsTest extends TestCase
         self::assertSame('https://store.example/shop/?wc-api=wc_gateway_paykassa_transaction', $urls->transaction_notification_url());
     }
 
-    public function test_external_override_applies_only_to_server_callbacks(): void
+    public function test_callback_override_does_not_change_default_browser_return_base(): void
     {
         $urls = new MerchantEndpointUrls(
             array('testmode' => 'no', 'external_base_url' => 'https://public.example/proxy/store///'),
@@ -35,12 +36,51 @@ final class MerchantEndpointUrlsTest extends TestCase
         self::assertSame('https://public.example/proxy/store/', $urls->server_callback_base_url());
         self::assertSame('https://private.example/wordpress/', $urls->browser_return_base_url());
         self::assertSame('external_override', $urls->server_callback_source());
+        self::assertSame('wordpress_home', $urls->browser_return_source());
         self::assertTrue($urls->server_callbacks_use_https());
         self::assertTrue($urls->browser_returns_use_https());
         self::assertSame('https://public.example/proxy/store/?wc-api=wc_gateway_paykassa', $urls->invoice_notification_url());
         self::assertSame('https://public.example/proxy/store/?wc-api=wc_gateway_paykassa_transaction', $urls->transaction_notification_url());
         self::assertSame('https://private.example/wordpress/?wc-api=wc_gateway_paykassa_return', $urls->success_return_url());
         self::assertSame('https://private.example/wordpress/?wc-api=wc_gateway_paykassa_cancel', $urls->failure_return_url());
+    }
+
+    public function test_callback_and_browser_return_overrides_are_independent(): void
+    {
+        $urls = new MerchantEndpointUrls(
+            array(
+                'testmode' => 'no',
+                'external_base_url' => 'https://callbacks.example/paykassa/',
+                'browser_return_base_url' => 'https://checkout.example/store/',
+            ),
+            'https://upstream.example/wordpress/'
+        );
+
+        self::assertSame('https://callbacks.example/paykassa/', $urls->server_callback_base_url());
+        self::assertSame('https://checkout.example/store/', $urls->browser_return_base_url());
+        self::assertSame('external_override', $urls->server_callback_source());
+        self::assertSame('external_override', $urls->browser_return_source());
+        self::assertSame('https://callbacks.example/paykassa/?wc-api=wc_gateway_paykassa', $urls->invoice_notification_url());
+        self::assertSame('https://callbacks.example/paykassa/?wc-api=wc_gateway_paykassa_transaction', $urls->transaction_notification_url());
+        self::assertSame('https://checkout.example/store/?wc-api=wc_gateway_paykassa_return', $urls->success_return_url());
+        self::assertSame('https://checkout.example/store/?wc-api=wc_gateway_paykassa_cancel', $urls->failure_return_url());
+    }
+
+    public function test_same_public_override_is_supported_for_callbacks_and_browser_returns(): void
+    {
+        $urls = new MerchantEndpointUrls(
+            array(
+                'testmode' => 'no',
+                'external_base_url' => 'https://public.example/',
+                'browser_return_base_url' => 'https://public.example/',
+            ),
+            'https://upstream.example/'
+        );
+
+        self::assertSame('https://public.example/?wc-api=wc_gateway_paykassa', $urls->invoice_notification_url());
+        self::assertSame('https://public.example/?wc-api=wc_gateway_paykassa_return', $urls->success_return_url());
+        self::assertSame('https://public.example/?wc-api=wc_gateway_paykassa_cancel', $urls->failure_return_url());
+        self::assertSame('https://public.example/?wc-api=wc_gateway_paykassa_transaction', $urls->transaction_notification_url());
     }
 
     public function test_http_home_url_is_reported_for_browser_returns_even_with_https_callback_override(): void
@@ -63,6 +103,31 @@ final class MerchantEndpointUrlsTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
         MerchantEndpointUrls::normalize_external_base_url('http://public.example/', true);
+    }
+
+    public function test_browser_return_override_uses_live_https_validation(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        new MerchantEndpointUrls(
+            array('testmode' => 'no', 'browser_return_base_url' => 'http://checkout.example/'),
+            'https://store.example/'
+        );
+    }
+
+    #[DataProvider('external_setting_keys')]
+    public function test_non_string_external_settings_are_rejected(string $key): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        new MerchantEndpointUrls(array('testmode' => 'no', $key => array('https://invalid.example/')), 'https://store.example/');
+    }
+
+    /** @return array<string, array{string}> */
+    public static function external_setting_keys(): array
+    {
+        return array(
+            'callback' => array('external_base_url'),
+            'browser return' => array('browser_return_base_url'),
+        );
     }
 
     #[DataProvider('invalid_external_urls')]

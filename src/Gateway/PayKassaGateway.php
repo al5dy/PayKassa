@@ -44,7 +44,8 @@ final class PayKassaGateway extends \WC_Payment_Gateway
             'shop_id' => array( 'title' => __('Merchant / Shop ID', 'paykassa'), 'type' => 'text', 'description' => __('Your PayKassa SCI merchant identifier.', 'paykassa') ),
             'shop_password' => array( 'title' => __('Merchant secret', 'paykassa'), 'type' => 'paykassa_secret', 'description' => __('Leave blank when saving to keep the current secret.', 'paykassa') ),
             'testmode' => array( 'title' => __('Test mode', 'paykassa'), 'type' => 'checkbox', 'label' => __('Use PayKassa test mode', 'paykassa'), 'default' => 'no' ),
-            'external_base_url' => array( 'title' => __('External PayKassa callback base URL (optional)', 'paykassa'), 'type' => 'text', 'placeholder' => 'https://public-store.example/', 'description' => __('Used only for the Invoice Payment Notification and Cryptocurrency Transaction Processor URLs. Successful payment and malfunction browser returns always use the WordPress home URL to preserve login and WooCommerce session cookies. HTTPS is required in Live mode.', 'paykassa') ),
+            'external_base_url' => array( 'title' => __('External PayKassa callback base URL (optional)', 'paykassa'), 'type' => 'text', 'placeholder' => 'https://public-callback.example/', 'description' => __('Used only for the Invoice Payment Notification and Cryptocurrency Transaction Processor URLs. Empty uses the WordPress home URL. HTTPS is required in Live mode.', 'paykassa') ),
+            'browser_return_base_url' => array( 'title' => __('External PayKassa browser return base URL (optional)', 'paykassa'), 'type' => 'text', 'placeholder' => 'https://public-store.example/', 'description' => __('Used only for successful payment and malfunction browser returns. Set it to the public origin where customers perform checkout so login and WooCommerce session cookies remain available. Empty uses the WordPress home URL. HTTPS is required in Live mode.', 'paykassa') ),
             'accepted_order_currencies' => array( 'title' => __('Accepted WooCommerce currencies', 'paykassa'), 'type' => 'multiselect', 'class' => 'wc-enhanced-select', 'css' => 'min-width: 320px;', 'options' => (new \Al5dy\PayKassaWoo\PayKassa\CurrencyRegistry())->order_currency_options(), 'default' => \Al5dy\PayKassaWoo\Infrastructure\Installer::default_order_currencies(), 'description' => __('Show PayKassa only for these WooCommerce order currencies. Fiat orders receive a fresh PayKassa quote only when an invoice is created.', 'paykassa') ),
             'enabled_payment_directions' => array( 'title' => __('Enabled crypto payment methods', 'paykassa'), 'type' => 'multiselect', 'class' => 'wc-enhanced-select', 'css' => 'min-width: 320px;', 'options' => $directions, 'default' => array(), 'description' => __('Choose exact cryptocurrency and network combinations. Existing enabled network settings are preserved during upgrade until this setting is saved.', 'paykassa') ),
             'api_id' => array( 'title' => __('API ID (optional)', 'paykassa'), 'type' => 'text', 'description' => __('Only required for connection tests and payment recovery.', 'paykassa') ),
@@ -62,10 +63,13 @@ final class PayKassaGateway extends \WC_Payment_Gateway
     {
         $stored = get_option($this->get_option_key(), array());
         $testmode_field = $this->plugin_id . $this->id . '_testmode';
-        $external_field = $this->plugin_id . $this->id . '_external_base_url';
         $minimums_field = $this->plugin_id . $this->id . '_minimum_payment_directions';
         try {
-            if (isset($_POST[$external_field])) {
+            foreach (array('external_base_url', 'browser_return_base_url') as $external_key) {
+                $external_field = $this->plugin_id . $this->id . '_' . $external_key;
+                if (! isset($_POST[$external_field])) {
+                    continue;
+                }
                 $external = wp_unslash($_POST[$external_field]);
                 if (! is_string($external)) {
                     throw new \InvalidArgumentException('External PayKassa base URL must be text.');

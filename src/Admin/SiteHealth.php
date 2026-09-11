@@ -29,10 +29,10 @@ final class SiteHealth
         try {
             $urls = new MerchantEndpointUrls($settings);
         } catch (\InvalidArgumentException $exception) {
-            return array( 'label' => __('PayKassa public URL override is invalid', 'paykassa'), 'status' => 'critical', 'badge' => array( 'label' => 'PayKassa', 'color' => 'red' ), 'description' => '<p>' . esc_html__('Correct the External PayKassa base URL before copying Merchant URLs.', 'paykassa') . '</p>', 'actions' => '' );
+            return array( 'label' => __('PayKassa public URL override is invalid', 'paykassa'), 'status' => 'critical', 'badge' => array( 'label' => 'PayKassa', 'color' => 'red' ), 'description' => '<p>' . esc_html__('Correct the external callback or browser return base URL before copying Merchant URLs.', 'paykassa') . '</p>', 'actions' => '' );
         }
         if ('yes' === ( $settings['enabled'] ?? 'no' ) && 'yes' !== ( $settings['testmode'] ?? 'no' ) && (! is_ssl() || ! $urls->server_callbacks_use_https() || ! $urls->browser_returns_use_https())) {
-            return array( 'label' => __('PayKassa needs HTTPS in live mode', 'paykassa'), 'status' => 'critical', 'badge' => array( 'label' => 'PayKassa', 'color' => 'red' ), 'description' => '<p>' . esc_html__('Enable HTTPS for both the public PayKassa callbacks and the canonical WordPress home URL before accepting live cryptocurrency payments.', 'paykassa') . '</p>', 'actions' => '' );
+            return array( 'label' => __('PayKassa needs HTTPS in live mode', 'paykassa'), 'status' => 'critical', 'badge' => array( 'label' => 'PayKassa', 'color' => 'red' ), 'description' => '<p>' . esc_html__('Enable HTTPS for both the public PayKassa callback base and browser return base before accepting live cryptocurrency payments.', 'paykassa') . '</p>', 'actions' => '' );
         }
         return array( 'label' => __('PayKassa configuration looks ready', 'paykassa'), 'status' => 'good', 'badge' => array( 'label' => 'PayKassa', 'color' => 'blue' ), 'description' => '<p>' . esc_html__('No credentials or HTTPS issue was detected.', 'paykassa') . '</p>', 'actions' => '' );
     }

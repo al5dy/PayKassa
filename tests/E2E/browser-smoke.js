@@ -19,37 +19,44 @@ async page => {
 			throw new Error( message );
 		}
 	};
-	const merchantUrlResponse = await page.request.get( `${ baseUrl }/?paykassa_browser_merchant_urls=1` );
-	assert( merchantUrlResponse.status() === 200, 'The disposable site must expose its test-only generated Merchant URLs.' );
-	const merchantUrls = await merchantUrlResponse.json();
+	const readMerchantUrls = async () => {
+		const response = await page.request.get( `${ baseUrl }/?paykassa_browser_merchant_urls=1` );
+		assert( response.status() === 200, 'The disposable site must expose its test-only generated Merchant URLs.' );
+		return response.json();
+	};
+	let merchantUrls = await readMerchantUrls();
 	assert(
-		merchantUrls.invoice_notification_url === 'https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa',
-		'External base override must apply to the Invoice Payment Notification URL.'
+		merchantUrls.callback_source === 'external_override' && merchantUrls.browser_return_source === 'external_override',
+		'Same-origin fixture must explicitly configure both independent public base overrides.'
 	);
 	assert(
-		merchantUrls.transaction_notification_url === 'https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa_transaction',
-		'External base override must apply to the Transaction Processor URL.'
+		merchantUrls.invoice_notification_url === `${ baseUrl }/?wc-api=wc_gateway_paykassa`,
+		'Same-origin configuration must apply the public checkout base to the Invoice Payment Notification URL.'
+	);
+	assert(
+		merchantUrls.transaction_notification_url === `${ baseUrl }/?wc-api=wc_gateway_paykassa_transaction`,
+		'Same-origin configuration must apply the public checkout base to the Transaction Processor URL.'
 	);
 	assert(
 		merchantUrls.success_return_url === `${ baseUrl }/?wc-api=wc_gateway_paykassa_return`,
-		'Success return must retain the canonical store origin when callback override is cross-origin.'
+		'Same-origin success return must use the public origin where checkout is performed.'
 	);
 	assert(
 		merchantUrls.failure_return_url === `${ baseUrl }/?wc-api=wc_gateway_paykassa_cancel`,
-		'Failure return must retain the canonical store origin when callback override is cross-origin.'
+		'Same-origin failure return must use the public origin where checkout is performed.'
 	);
 	assert(
-		merchantUrls.invoice_notification_url.startsWith( 'https://ocelot-dribble-creature.ngrok-free.dev/' ) &&
+		merchantUrls.invoice_notification_url.startsWith( `${ baseUrl }/` ) &&
 			merchantUrls.success_return_url.startsWith( `${ baseUrl }/` ),
-		'The browser smoke must exercise distinct callback and browser-return origins.'
+		'The browser smoke must begin with callback and browser returns on one public checkout origin.'
 	);
 	const orderIdFromHostedUrl = () => {
 		const match = page.url().match( /^https:\/\/paykassa\.app\/browser-smoke\?[^#]*\border_id=(\d+)/ );
 		assert( !! match, 'Checkout must produce the reviewed PayKassa hosted URL.' );
 		return match[ 1 ];
 	};
-	const postNotification = async ( endpoint, orderId, privateHash, rawHints = {} ) => {
-		const response = await page.request.post( `${ baseUrl }/?wc-api=${ endpoint }`, {
+	const postNotification = async ( endpointUrl, orderId, privateHash, rawHints = {} ) => {
+		const response = await page.request.post( endpointUrl, {
 			form: {
 				private_hash: privateHash,
 				order_id: orderId,
@@ -58,9 +65,9 @@ async page => {
 			maxRedirects: 0,
 		} );
 		const body = await response.text();
-		assert( response.status() === 200, `${ endpoint } must return HTTP 200 after verified processing.` );
-		assert( response.headers()[ 'content-type' ] === 'text/plain; charset=utf-8', `${ endpoint } must return text/plain.` );
-		assert( body === `${ orderId }|success`, `${ endpoint } response must be the exact PayKassa acknowledgement without HTML or whitespace.` );
+		assert( response.status() === 200, `${ endpointUrl } must return HTTP 200 after verified processing.` );
+		assert( response.headers()[ 'content-type' ] === 'text/plain; charset=utf-8', `${ endpointUrl } must return text/plain.` );
+		assert( body === `${ orderId }|success`, `${ endpointUrl } response must be the exact PayKassa acknowledgement without HTML or whitespace.` );
 	};
 	const addProduct = async () => {
 		await page.goto( `${ baseUrl }/?add-to-cart=${ productId }`, { waitUntil: 'networkidle' } );
@@ -83,9 +90,9 @@ async page => {
 	await waitForHostedRedirect( page.getByRole( 'button', { name: 'Place order' } ) );
 	const classicOrderId = orderIdFromHostedUrl();
 
-	await postNotification( 'wc_gateway_paykassa', classicOrderId, `browser-invoice-${ classicOrderId }-0123456789abcdef` );
+	await postNotification( merchantUrls.invoice_notification_url, classicOrderId, `browser-invoice-${ classicOrderId }-0123456789abcdef` );
 	await postNotification(
-		'wc_gateway_paykassa_transaction',
+		merchantUrls.transaction_notification_url,
 		classicOrderId,
 		`browser-transaction-confirmed-${ classicOrderId }-0123456789abcdef`,
 		{ currency: 'UNTRUSTED', system: 'UNTRUSTED' }
@@ -93,6 +100,31 @@ async page => {
 	await page.goto( `${ merchantUrls.success_return_url }&order_id=${ classicOrderId }`, { waitUntil: 'networkidle' } );
 	assert( page.url().includes( `/order-received/${ classicOrderId }/` ), 'Classic success return must reach the native order-received URL.' );
 	assert( await page.getByRole( 'heading', { name: 'Order received' } ).isVisible(), 'Classic success return must render the WooCommerce thank-you page.' );
+
+	const originSwitch = await page.request.post( `${ baseUrl }/?paykassa_browser_url_scenario=split`, {
+		form: { token: 'paykassa-browser-fixture' },
+		maxRedirects: 0,
+	} );
+	assert( originSwitch.status() === 204, 'The disposable site must switch to its split callback/browser-origin fixture.' );
+	merchantUrls = await readMerchantUrls();
+	assert(
+		merchantUrls.callback_source === 'external_override' && merchantUrls.browser_return_source === 'wordpress_home',
+		'Split-origin fixture must configure only the callback override and independently default browser returns.'
+	);
+	assert(
+		merchantUrls.invoice_notification_url.startsWith( 'https://127.0.0.1:' ) &&
+			merchantUrls.transaction_notification_url.startsWith( 'https://127.0.0.1:' ),
+		'Split-origin configuration must use the independent callback base for both server notifications.'
+	);
+	assert(
+		merchantUrls.success_return_url === `${ baseUrl }/?wc-api=wc_gateway_paykassa_return` &&
+			merchantUrls.failure_return_url === `${ baseUrl }/?wc-api=wc_gateway_paykassa_cancel`,
+		'Split-origin configuration must default browser returns independently to the canonical checkout origin.'
+	);
+	assert(
+		! merchantUrls.invoice_notification_url.startsWith( `${ baseUrl }/` ),
+		'Split-origin fixture must genuinely use a different callback origin.'
+	);
 	const checkoutSwitch = await page.request.post( `${ baseUrl }/?paykassa_browser_checkout=blocks`, {
 		form: { token: 'paykassa-browser-fixture' },
 		maxRedirects: 0,
@@ -106,8 +138,8 @@ async page => {
 	await waitForHostedRedirect( page.getByRole( 'button', { name: 'Place Order' } ) );
 	const blocksOrderId = orderIdFromHostedUrl();
 
-	await postNotification( 'wc_gateway_paykassa_transaction', blocksOrderId, `browser-transaction-confirmed-${ blocksOrderId }-0123456789abcdef` );
-	await postNotification( 'wc_gateway_paykassa', blocksOrderId, `browser-invoice-${ blocksOrderId }-0123456789abcdef` );
+	await postNotification( merchantUrls.transaction_notification_url, blocksOrderId, `browser-transaction-confirmed-${ blocksOrderId }-0123456789abcdef` );
+	await postNotification( merchantUrls.invoice_notification_url, blocksOrderId, `browser-invoice-${ blocksOrderId }-0123456789abcdef` );
 	await page.goto( `${ merchantUrls.success_return_url }&order_id=${ blocksOrderId }`, { waitUntil: 'networkidle' } );
 	assert( page.url().includes( `/order-received/${ blocksOrderId }/` ), 'Blocks success return must reach the native order-received URL.' );
 	assert( await page.getByRole( 'heading', { name: 'Order received' } ).isVisible(), 'Blocks success return must render the WooCommerce thank-you page.' );
@@ -117,17 +149,17 @@ async page => {
 	await page.getByRole( 'radio', { name: 'Cryptocurrency (PayKassa)' } ).waitFor();
 	await waitForHostedRedirect( page.getByRole( 'button', { name: 'Place Order' } ) );
 	const failedOrderId = orderIdFromHostedUrl();
-	await postNotification( 'wc_gateway_paykassa_transaction', failedOrderId, `browser-transaction-pending-${ failedOrderId }-0123456789abcdef` );
+	await postNotification( merchantUrls.transaction_notification_url, failedOrderId, `browser-transaction-pending-${ failedOrderId }-0123456789abcdef` );
 	await page.goto( `${ merchantUrls.failure_return_url }&order_id=${ failedOrderId }`, { waitUntil: 'networkidle' } );
 	assert( page.url().includes( `/blocks-checkout/order-pay/${ failedOrderId }/` ), 'Failure return must reach the native retry-payment URL.' );
 	assert( await page.getByText( 'The PayKassa payment was not completed.' ).isVisible(), 'Failure return must show a generic retry notice.' );
 	assert( await page.getByRole( 'button', { name: 'Pay for order' } ).isVisible(), 'Failure return must leave the unpaid order retryable.' );
 
-	const invoiceGet = await page.request.get( `${ baseUrl }/?wc-api=wc_gateway_paykassa`, { maxRedirects: 0 } );
-	const invoiceMissingHash = await page.request.post( `${ baseUrl }/?wc-api=wc_gateway_paykassa`, { form: {}, maxRedirects: 0 } );
-	const transactionMissingHash = await page.request.post( `${ baseUrl }/?wc-api=wc_gateway_paykassa_transaction`, { form: {}, maxRedirects: 0 } );
-	const returnPost = await page.request.post( `${ baseUrl }/?wc-api=wc_gateway_paykassa_return&order_id=${ failedOrderId }`, { form: {}, maxRedirects: 0 } );
-	const unknownReturn = await page.request.get( `${ baseUrl }/?wc-api=wc_gateway_paykassa_return&order_id=999999999`, { maxRedirects: 0 } );
+	const invoiceGet = await page.request.get( merchantUrls.invoice_notification_url, { maxRedirects: 0 } );
+	const invoiceMissingHash = await page.request.post( merchantUrls.invoice_notification_url, { form: {}, maxRedirects: 0 } );
+	const transactionMissingHash = await page.request.post( merchantUrls.transaction_notification_url, { form: {}, maxRedirects: 0 } );
+	const returnPost = await page.request.post( `${ merchantUrls.success_return_url }&order_id=${ failedOrderId }`, { form: {}, maxRedirects: 0 } );
+	const unknownReturn = await page.request.get( `${ merchantUrls.success_return_url }&order_id=999999999`, { maxRedirects: 0 } );
 	assert( invoiceGet.status() === 405, 'Invoice notification must be POST-only.' );
 	assert( invoiceMissingHash.status() === 400, 'Invoice notification without private_hash must fail closed.' );
 	assert( transactionMissingHash.status() === 400, 'Transaction notification without private_hash must fail closed.' );
@@ -143,6 +175,7 @@ async page => {
 		failedOrderId,
 		invoiceFirstThenTransaction: true,
 		transactionFirstThenInvoice: true,
-		callbackAndBrowserOriginsSeparated: true,
+		samePublicOriginSessionPreserved: true,
+		splitOriginSessionPreserved: true,
 	};
 }

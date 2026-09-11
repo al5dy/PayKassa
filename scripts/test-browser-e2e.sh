@@ -3,13 +3,18 @@ set -euo pipefail
 
 base_dir=$(cd "$(dirname "$0")/.." && pwd)
 plugin_zip=${PAYKASSA_TEST_PLUGIN_ZIP:-"$base_dir/dist/paykassa-2.0.0.zip"}
-port=${PAYKASSA_E2E_PORT:-8892}
-base_url="http://127.0.0.1:${port}"
+backend_port=${PAYKASSA_E2E_PORT:-8892}
+public_port=${PAYKASSA_E2E_PUBLIC_PORT:-$((backend_port + 1))}
+callback_port=${PAYKASSA_E2E_CALLBACK_PORT:-$((backend_port + 2))}
+backend_url="http://127.0.0.1:${backend_port}"
+base_url="https://localhost:${public_port}"
+split_callback_base_url="https://127.0.0.1:${callback_port}"
 site_dir=$(mktemp -d /tmp/paykassa-browser.XXXXXXXX)
 task_id=${site_dir##*.}
 database="paykassa_browser_${task_id,,}"
 database_created=false
 server_pid=''
+proxy_pids=()
 session="paykassa-e2e-${task_id,,}"
 wp_cli=(wp --path="$site_dir" --no-color)
 playwright_cli=(npx --yes --package @playwright/cli playwright-cli --session "$session")
@@ -18,6 +23,12 @@ cleanup() {
 	local result=$?
 	trap - EXIT
 	"${playwright_cli[@]}" close >/dev/null 2>&1 || true
+	for proxy_pid in "${proxy_pids[@]}"; do
+		if kill -0 "$proxy_pid" 2>/dev/null; then
+			kill "$proxy_pid" || true
+			wait "$proxy_pid" 2>/dev/null || true
+		fi
+	done
 	if [[ -n "$server_pid" ]] && kill -0 "$server_pid" 2>/dev/null; then
 		kill "$server_pid" || true
 		wait "$server_pid" 2>/dev/null || true
@@ -36,6 +47,10 @@ trap cleanup EXIT
 
 if [[ ! -f "$plugin_zip" ]]; then
 	printf 'Build the release ZIP before running browser tests.\n' >&2
+	exit 1
+fi
+if ! command -v openssl >/dev/null 2>&1; then
+	printf 'OpenSSL is required for the HTTPS browser-origin smoke.\n' >&2
 	exit 1
 fi
 
@@ -58,6 +73,9 @@ cp "$base_dir/tests/fixtures/browser-provider.php" "$site_dir/wp-content/mu-plug
 "${wp_cli[@]}" core install --url="$base_url" --title='PayKassa browser test' \
 	--admin_user=paykassa_test --admin_password=local-test-password \
 	--admin_email=paykassa@example.invalid --skip-email
+mkdir -p "$site_dir/wp-content/themes/paykassa-browser-test"
+cp -R "$base_dir/tests/fixtures/browser-theme/." "$site_dir/wp-content/themes/paykassa-browser-test/"
+"${wp_cli[@]}" theme activate paykassa-browser-test
 "${wp_cli[@]}" plugin install woocommerce --version="${PAYKASSA_TEST_WC_VERSION:-11.1.0}"
 if ! "${wp_cli[@]}" plugin activate woocommerce; then
 	# Some local XAMPP builds can terminate the first activation while
@@ -81,23 +99,35 @@ PAYKASSA_BLOCKS_PAGE_ID="$blocks_checkout_id" "${wp_cli[@]}" eval '$method = new
 "${wp_cli[@]}" option update woocommerce_default_country US:CA
 "${wp_cli[@]}" option update woocommerce_enable_guest_checkout yes
 "${wp_cli[@]}" option update woocommerce_enable_signup_and_login_from_checkout no
-"${wp_cli[@]}" option update woocommerce_paykassa_settings '{"enabled":"yes","shop_id":"browser-shop","shop_password":"browser-secret","testmode":"no","title":"Cryptocurrency (PayKassa)","description":"Browser smoke cryptocurrency payment.","accepted_order_currencies":["USD"],"enabled_payment_directions":["ethereum_erc20:USDT"],"external_base_url":"https://ocelot-dribble-creature.ngrok-free.dev/","minimum_payment_directions":"","debug":"yes"}' --format=json
+settings_json=$(printf '{"enabled":"yes","shop_id":"browser-shop","shop_password":"browser-secret","testmode":"no","title":"Cryptocurrency (PayKassa)","description":"Browser smoke cryptocurrency payment.","accepted_order_currencies":["USD"],"enabled_payment_directions":["ethereum_erc20:USDT"],"external_base_url":"%s/","browser_return_base_url":"%s/","minimum_payment_directions":"","debug":"yes"}' "$base_url" "$base_url")
+"${wp_cli[@]}" option update woocommerce_paykassa_settings "$settings_json" --format=json
+"${wp_cli[@]}" option update paykassa_browser_split_callback_base "$split_callback_base_url/"
 product_id=$("${wp_cli[@]}" eval '$product = new WC_Product_Simple(); $product->set_name("Browser PayKassa Product"); $product->set_regular_price("2.00"); $product->set_price("2.00"); $product->set_virtual(true); $product->set_status("publish"); echo $product->save();')
 "${wp_cli[@]}" rewrite structure '/%postname%/' --hard
 
 mkdir -p "$base_dir/output/playwright"
-"${wp_cli[@]}" server --host=127.0.0.1 --port="$port" >"$base_dir/output/playwright/wp-server.log" 2>&1 &
+certificate_path="$site_dir/paykassa-browser.crt"
+key_path="$site_dir/paykassa-browser.key"
+openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 1 \
+	-keyout "$key_path" -out "$certificate_path" -subj '/CN=localhost' \
+	-addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' >/dev/null 2>&1
+PHP_CLI_SERVER_WORKERS=4 "${wp_cli[@]}" server --host=127.0.0.1 --port="$backend_port" >"$base_dir/output/playwright/wp-server.log" 2>&1 &
 server_pid=$!
+node "$base_dir/tests/E2E/https-reverse-proxy.js" "$backend_port" "$public_port" "$certificate_path" "$key_path" >"$base_dir/output/playwright/public-proxy.log" 2>&1 &
+proxy_pids+=("$!")
+node "$base_dir/tests/E2E/https-reverse-proxy.js" "$backend_port" "$callback_port" "$certificate_path" "$key_path" >"$base_dir/output/playwright/callback-proxy.log" 2>&1 &
+proxy_pids+=("$!")
 for _attempt in $(seq 1 30); do
-	if curl -fsS "$base_url" >/dev/null; then
+	if curl -kfsS "$base_url" >/dev/null && curl -kfsS "$split_callback_base_url" >/dev/null; then
 		break
 	fi
 	sleep 1
 done
-curl -fsS "$base_url" >/dev/null
+curl -kfsS "$base_url" >/dev/null
+curl -kfsS "$split_callback_base_url" >/dev/null
 
 pushd "$base_dir/output/playwright" >/dev/null
-"${playwright_cli[@]}" open "$base_url/?paykassa_e2e_product=$product_id"
+"${playwright_cli[@]}" open "$base_url/?paykassa_e2e_product=$product_id" --config "$base_dir/tests/E2E/playwright-cli.json"
 "${playwright_cli[@]}" run-code --filename "$base_dir/tests/E2E/browser-smoke.js"
 "${playwright_cli[@]}" console error
 popd >/dev/null
@@ -107,4 +137,4 @@ if [[ -n "$PAYKASSA_FAILED_ORDER_ID" ]]; then
 	PAYKASSA_FAILED_ORDER_ID="$PAYKASSA_FAILED_ORDER_ID" "${wp_cli[@]}" eval '$order = wc_get_order((int) getenv("PAYKASSA_FAILED_ORDER_ID")); if (! $order instanceof WC_Order || $order->is_paid() || "pending" !== $order->get_status()) { throw new RuntimeException("Failure return mutated the unpaid order."); }'
 fi
 
-printf 'PayKassa browser E2E passed: split callback/browser origins, Classic Checkout, Blocks Checkout, exact IPN ACKs, success return, and failure retry.\n'
+printf 'PayKassa browser E2E passed: same-public-origin and split-origin URL configurations, guest session returns, Classic Checkout, Blocks Checkout, exact IPN ACKs, success return, and failure retry.\n'

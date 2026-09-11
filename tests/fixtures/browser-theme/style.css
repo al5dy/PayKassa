@@ -1,0 +1,15 @@
+/*
+Theme Name: PayKassa Browser Test
+Version: 1.0.0
+Requires PHP: 8.1
+*/
+
+body {
+	font-family: sans-serif;
+	margin: 2rem;
+}
+
+main {
+	max-width: 72rem;
+	margin: 0 auto;
+}

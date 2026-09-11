@@ -14,22 +14,32 @@ final class MerchantEndpointUrls
     private readonly string $server_callback_base_url;
     private readonly string $browser_return_base_url;
     private readonly string $server_callback_source;
+    private readonly string $browser_return_source;
 
     /** @param array<string, mixed> $settings */
     public function __construct(array $settings = array(), ?string $home_base_url = null)
     {
         $home_base_url ??= home_url('/');
-        $this->browser_return_base_url = self::with_trailing_slash($home_base_url);
-        $external = isset($settings['external_base_url']) && is_string($settings['external_base_url'])
-            ? trim($settings['external_base_url'])
-            : '';
-        if ('' !== $external) {
-            $this->server_callback_base_url = self::normalize_external_base_url($external, 'yes' !== ($settings['testmode'] ?? 'no'));
+        $home_base_url = self::with_trailing_slash($home_base_url);
+        $live_mode = 'yes' !== ($settings['testmode'] ?? 'no');
+        $callback_external = self::setting_value($settings, 'external_base_url');
+        $browser_external = self::setting_value($settings, 'browser_return_base_url');
+
+        if ('' !== $callback_external) {
+            $this->server_callback_base_url = self::normalize_external_base_url($callback_external, $live_mode);
             $this->server_callback_source = 'external_override';
-            return;
+        } else {
+            $this->server_callback_base_url = $home_base_url;
+            $this->server_callback_source = 'wordpress_home';
         }
-        $this->server_callback_base_url = $this->browser_return_base_url;
-        $this->server_callback_source = 'wordpress_home';
+
+        if ('' !== $browser_external) {
+            $this->browser_return_base_url = self::normalize_external_base_url($browser_external, $live_mode);
+            $this->browser_return_source = 'external_override';
+        } else {
+            $this->browser_return_base_url = $home_base_url;
+            $this->browser_return_source = 'wordpress_home';
+        }
     }
 
     public function invoice_notification_url(): string
@@ -65,6 +75,11 @@ final class MerchantEndpointUrls
     public function server_callback_source(): string
     {
         return $this->server_callback_source;
+    }
+
+    public function browser_return_source(): string
+    {
+        return $this->browser_return_source;
     }
 
     public function server_callbacks_use_https(): bool
@@ -118,5 +133,17 @@ final class MerchantEndpointUrls
     private static function with_trailing_slash(string $url): string
     {
         return rtrim($url, '/') . '/';
+    }
+
+    /** @param array<string, mixed> $settings */
+    private static function setting_value(array $settings, string $key): string
+    {
+        if (! isset($settings[$key])) {
+            return '';
+        }
+        if (! is_string($settings[$key])) {
+            throw new \InvalidArgumentException('External PayKassa base URL must be text.');
+        }
+        return trim($settings[$key]);
     }
 }

@@ -52,13 +52,10 @@ final class DiagnosticsPage
         $settings = get_option('woocommerce_paykassa_settings', array());
         $settings = is_array($settings) ? $settings : array();
         $test_mode = 'yes' === ( $settings['testmode'] ?? 'no' );
-        $invalid_external_url = false;
-        try {
-            $endpoint_urls = new MerchantEndpointUrls($settings);
-        } catch (\InvalidArgumentException $exception) {
-            $invalid_external_url = true;
-            $endpoint_urls = new MerchantEndpointUrls(array_replace($settings, array('external_base_url' => '')));
-        }
+        $endpoint_settings = $settings;
+        $invalid_callback_url = ! self::sanitize_external_base_setting($endpoint_settings, 'external_base_url', ! $test_mode);
+        $invalid_browser_url = ! self::sanitize_external_base_setting($endpoint_settings, 'browser_return_base_url', ! $test_mode);
+        $endpoint_urls = new MerchantEndpointUrls($endpoint_settings);
         $report = array(
             'Plugin version' => PAYKASSA_VERSION,
             'WordPress version' => get_bloginfo('version'),
@@ -71,7 +68,7 @@ final class DiagnosticsPage
             __('Public PayKassa callback base URL', 'paykassa') => $endpoint_urls->server_callback_base_url(),
             __('Callback URL source', 'paykassa') => 'external_override' === $endpoint_urls->server_callback_source() ? __('External override', 'paykassa') : __('WordPress home URL', 'paykassa'),
             __('Browser return base URL', 'paykassa') => $endpoint_urls->browser_return_base_url(),
-            __('Browser return URL source', 'paykassa') => __('WordPress home URL', 'paykassa'),
+            __('Browser return URL source', 'paykassa') => 'external_override' === $endpoint_urls->browser_return_source() ? __('External override', 'paykassa') : __('WordPress home URL', 'paykassa'),
             'Last reconciliation' => get_option('paykassa_last_reconciliation', __('Never', 'paykassa')),
             __('Last completed history scan', 'paykassa') => get_option('paykassa_last_history_scan', __('Never', 'paykassa')),
             __('Last recovery error', 'paykassa') => get_option('paykassa_last_reconciliation_error', __('Never', 'paykassa')),
@@ -89,13 +86,15 @@ final class DiagnosticsPage
             }
         }
         echo '<div class="wrap"><h1>' . esc_html__('PayKassa payment health', 'paykassa') . '</h1>';
-        if ($invalid_external_url) {
-            echo '<div class="notice notice-error"><p>' . esc_html__('The stored External PayKassa base URL is invalid. Server callback URLs below use the WordPress home URL until the setting is corrected. Browser returns are unaffected.', 'paykassa') . '</p></div>';
+        if ($invalid_callback_url) {
+            echo '<div class="notice notice-error"><p>' . esc_html__('The stored external PayKassa callback base URL is invalid. Server callback URLs below use the WordPress home URL until the setting is corrected.', 'paykassa') . '</p></div>';
         } elseif (! $test_mode && ! $endpoint_urls->server_callbacks_use_https()) {
             echo '<div class="notice notice-error"><p>' . esc_html__('Critical: Live PayKassa notification URLs must use HTTPS.', 'paykassa') . '</p></div>';
         }
-        if (! $test_mode && ! $endpoint_urls->browser_returns_use_https()) {
-            echo '<div class="notice notice-error"><p>' . esc_html__('Critical: the canonical WordPress home URL must use HTTPS for secure PayKassa browser returns.', 'paykassa') . '</p></div>';
+        if ($invalid_browser_url) {
+            echo '<div class="notice notice-error"><p>' . esc_html__('The stored external PayKassa browser return base URL is invalid. Browser return URLs below use the WordPress home URL until the setting is corrected.', 'paykassa') . '</p></div>';
+        } elseif (! $test_mode && ! $endpoint_urls->browser_returns_use_https()) {
+            echo '<div class="notice notice-error"><p>' . esc_html__('Critical: Live PayKassa browser return URLs must use HTTPS.', 'paykassa') . '</p></div>';
         }
         echo '<div class="notice notice-warning"><p>' . esc_html__('Payment recovery is experimental and disabled by default. History records and invoice TXIDs are never sufficient payment evidence; settlement still requires SCI-verified immutable payment facts.', 'paykassa') . '</p></div>';
         $connection_key = 'paykassa_connection_test_' . get_current_user_id();
@@ -142,7 +141,7 @@ final class DiagnosticsPage
             ),
         );
         echo '<h2>' . esc_html__('PayKassa Merchant URLs', 'paykassa') . '</h2>';
-        echo '<p>' . esc_html__('Copy each URL into the matching field in PayKassa Merchant settings. External override applies only to the two server callbacks; browser returns stay on the WordPress home origin so login and WooCommerce session cookies remain available. The plugin does not access or modify your PayKassa account.', 'paykassa') . '</p>';
+        echo '<p>' . esc_html__('Copy each URL into the matching field in PayKassa Merchant settings. Callback and browser-return bases are configured independently. The browser-return base must match the public origin where customers perform checkout so login and WooCommerce session cookies remain available. The plugin does not access or modify your PayKassa account.', 'paykassa') . '</p>';
         echo '<table class="widefat striped"><tbody>';
         $index = 0;
         foreach ($rows as $label => $row) {
@@ -165,5 +164,30 @@ final class DiagnosticsPage
             __('Malfunction endpoint (GET)', 'paykassa') => false !== has_action('woocommerce_api_' . MerchantEndpointUrls::FAILURE_RETURN),
             __('Transaction processor endpoint (POST, Live only)', 'paykassa') => false !== has_action('woocommerce_api_' . MerchantEndpointUrls::TRANSACTION_NOTIFICATION),
         );
+    }
+
+    /** @param array<string, mixed> $settings */
+    private static function sanitize_external_base_setting(array &$settings, string $key, bool $live_mode): bool
+    {
+        $value = $settings[$key] ?? '';
+        if ('' === $value) {
+            $settings[$key] = '';
+            return true;
+        }
+        if (! is_string($value)) {
+            $settings[$key] = '';
+            return false;
+        }
+        if ('' === trim($value)) {
+            $settings[$key] = '';
+            return true;
+        }
+        try {
+            $settings[$key] = MerchantEndpointUrls::normalize_external_base_url($value, $live_mode);
+            return true;
+        } catch (\InvalidArgumentException $exception) {
+            $settings[$key] = '';
+            return false;
+        }
     }
 }
