@@ -171,10 +171,10 @@ final class WebhookProcessor
         $legacy_settings = get_option('woocommerce_paykassa_settings', array());
         $expected_shop = '' !== $snapshot->merchant_shop_id ? $snapshot->merchant_shop_id : (is_array($legacy_settings) ? (string) ($legacy_settings['shop_id'] ?? '') : '');
         return $snapshot->order_id === $order->get_id()
-            && $snapshot->order_currency === $order->get_currency()
+            && strtoupper($snapshot->order_currency) === strtoupper((string) $order->get_currency())
             && $snapshot->environment() === $evidence->environment
             && Decimal::equal($snapshot->expected_amount, (string) $order->get_total())
-            && Decimal::equal($snapshot->expected_amount, $evidence->amount)
+            && Decimal::equal($snapshot->payment_amount, $evidence->amount)
             && strtoupper($snapshot->provider_currency) === strtoupper($evidence->currency)
             && strtolower($snapshot->provider_system) === strtolower($evidence->system)
             && hash_equals($snapshot->provider_invoice_id, $evidence->payment_link_hash)

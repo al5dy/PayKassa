@@ -10,7 +10,7 @@ use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 
 final class PayKassaGateway extends \WC_Payment_Gateway
 {
-    /** @var array<string, string> */
+    /** @var array<string, mixed> */
     private array $settings_data;
 
     public function __construct()
@@ -30,6 +30,10 @@ final class PayKassaGateway extends \WC_Payment_Gateway
 
     public function init_form_fields(): void
     {
+        $directions = array();
+        foreach ((new PaymentSystemRegistry())->directions() as $key => $direction) {
+            $directions[$key] = $direction['label'];
+        }
         $this->form_fields = array(
             'enabled' => array( 'title' => __('Enable/Disable', 'paykassa'), 'type' => 'checkbox', 'label' => __('Enable PayKassa', 'paykassa'), 'default' => 'no' ),
             'title' => array( 'title' => __('Title', 'paykassa'), 'type' => 'text', 'default' => __('Cryptocurrency (PayKassa)', 'paykassa') ),
@@ -37,7 +41,8 @@ final class PayKassaGateway extends \WC_Payment_Gateway
             'shop_id' => array( 'title' => __('Merchant / Shop ID', 'paykassa'), 'type' => 'text', 'description' => __('Your PayKassa SCI merchant identifier.', 'paykassa') ),
             'shop_password' => array( 'title' => __('Merchant secret', 'paykassa'), 'type' => 'paykassa_secret', 'description' => __('Leave blank when saving to keep the current secret.', 'paykassa') ),
             'testmode' => array( 'title' => __('Test mode', 'paykassa'), 'type' => 'checkbox', 'label' => __('Use PayKassa test mode', 'paykassa'), 'default' => 'no' ),
-            'enabled_systems' => array( 'title' => __('Enabled payment networks', 'paykassa'), 'type' => 'text', 'description' => __('Comma-separated current PayKassa system keys (for example bitcoin,tron_trc20,ton). Leave empty to enable documented crypto directions compatible with the order currency.', 'paykassa') ),
+            'accepted_order_currencies' => array( 'title' => __('Accepted WooCommerce currencies', 'paykassa'), 'type' => 'multiselect', 'class' => 'wc-enhanced-select', 'css' => 'min-width: 320px;', 'options' => (new \Al5dy\PayKassaWoo\PayKassa\CurrencyRegistry())->order_currency_options(), 'default' => (new \Al5dy\PayKassaWoo\PayKassa\CurrencyRegistry())->legacy_order_currencies(), 'description' => __('Show PayKassa only for these WooCommerce order currencies. Fiat orders receive a fresh PayKassa quote only when an invoice is created.', 'paykassa') ),
+            'enabled_payment_directions' => array( 'title' => __('Enabled crypto payment methods', 'paykassa'), 'type' => 'multiselect', 'class' => 'wc-enhanced-select', 'css' => 'min-width: 320px;', 'options' => $directions, 'default' => array(), 'description' => __('Choose exact cryptocurrency and network combinations. Existing enabled network settings are preserved during upgrade until this setting is saved.', 'paykassa') ),
             'api_id' => array( 'title' => __('API ID (optional)', 'paykassa'), 'type' => 'text', 'description' => __('Only required for connection tests and payment recovery.', 'paykassa') ),
             'api_password' => array( 'title' => __('API password (optional)', 'paykassa'), 'type' => 'paykassa_secret', 'description' => __('Leave blank when saving to keep the current secret.', 'paykassa') ),
             'reconciliation_enabled' => array( 'title' => __('Payment recovery', 'paykassa'), 'type' => 'checkbox', 'label' => __('Enable bounded background reconciliation when API credentials are configured', 'paykassa'), 'default' => 'no' ),
@@ -56,6 +61,16 @@ final class PayKassaGateway extends \WC_Payment_Gateway
             if (isset($_POST[ $field ]) && '' === (string) wp_unslash($_POST[ $field ]) && is_array($stored) && isset($stored[ $key ])) {
                 $_POST[ $field ] = $stored[ $key ];
             }
+        }
+        $accepted_field = $this->plugin_id . $this->id . '_accepted_order_currencies';
+        if (isset($_POST[$accepted_field]) && is_array($_POST[$accepted_field])) {
+            $submitted = array_map('strval', wp_unslash($_POST[$accepted_field]));
+            $_POST[$accepted_field] = array_values(array_intersect(array_keys((new \Al5dy\PayKassaWoo\PayKassa\CurrencyRegistry())->order_currency_options()), array_map('strtoupper', $submitted)));
+        }
+        $directions_field = $this->plugin_id . $this->id . '_enabled_payment_directions';
+        if (isset($_POST[$directions_field]) && is_array($_POST[$directions_field])) {
+            $submitted = array_map('strval', wp_unslash($_POST[$directions_field]));
+            $_POST[$directions_field] = array_values(array_intersect(array_keys((new PaymentSystemRegistry())->directions()), $submitted));
         }
         $saved = parent::process_admin_options();
         $this->settings_data = $this->settings;
@@ -90,24 +105,22 @@ final class PayKassaGateway extends \WC_Payment_Gateway
     public function payment_fields(): void
     {
         $currency = get_woocommerce_currency();
-        $systems = ( new PaymentSystemRegistry() )->all();
+        $directions = (new GatewayAvailability())->directions_for_order_currency($currency, $this->settings_data);
         if ($this->description) {
             echo wp_kses_post(wpautop(wptexturize((string) apply_filters('paykassa_checkout_description', $this->description, $this))));
         }
-        echo '<p><label for="paykassa_system">' . esc_html__('Cryptocurrency network', 'paykassa') . '</label><select id="paykassa_system" name="paykassa_system">';
-        foreach ($systems as $key => $system) {
-            if (( new GatewayAvailability() )->enabled((string) $key, $this->settings_data) && in_array(strtoupper($currency), $system['currencies'], true)) {
-                echo '<option value="' . esc_attr((string) $key) . '">' . esc_html((string) $system['label'] . ' — ' . $currency) . '</option>';
-            }
+        echo '<p><label for="paykassa_direction">' . esc_html__('Pay with cryptocurrency', 'paykassa') . '</label><select id="paykassa_direction" name="paykassa_direction">';
+        foreach ($directions as $key => $direction) {
+            echo '<option value="' . esc_attr((string) $key) . '">' . esc_html($direction['label']) . '</option>';
         }
         echo '</select></p>';
     }
 
     public function validate_fields(): bool
     {
-        $key = isset($_POST['paykassa_system']) ? sanitize_key((string) wp_unslash($_POST['paykassa_system'])) : '';
-        if (! ( new GatewayAvailability() )->enabled($key, $this->settings_data) || ! ( new PaymentSystemRegistry() )->get($key)) {
-            wc_add_notice(__('Choose an available PayKassa cryptocurrency network.', 'paykassa'), 'error');
+        $direction = $this->selected_direction();
+        if (! (new GatewayAvailability())->enabled_direction($direction, $this->settings_data) || ! isset((new GatewayAvailability())->directions_for_order_currency(get_woocommerce_currency(), $this->settings_data)[$direction])) {
+            wc_add_notice(__('Choose an available PayKassa cryptocurrency and network.', 'paykassa'), 'error');
             return false;
         }
         return true;
@@ -121,9 +134,9 @@ final class PayKassaGateway extends \WC_Payment_Gateway
             wc_add_notice(__('We could not find this order.', 'paykassa'), 'error');
             return array( 'result' => 'failure' );
         }
-        $key = isset($_POST['paykassa_system']) ? sanitize_key((string) wp_unslash($_POST['paykassa_system'])) : '';
+        $direction = $this->selected_direction();
         try {
-            $url = ( new OrderPaymentService() )->create_or_reuse($order, $this->settings_data, $key);
+            $url = ( new OrderPaymentService() )->create_or_reuse($order, $this->settings_data, $direction);
             if (WC()->cart) {
                 WC()->cart->empty_cart();
             }
@@ -133,5 +146,17 @@ final class PayKassaGateway extends \WC_Payment_Gateway
             wc_add_notice(__('We could not start the PayKassa payment. Please try another method or contact the store.', 'paykassa'), 'error');
             return array( 'result' => 'failure' );
         }
+    }
+
+    private function selected_direction(): string
+    {
+        if (isset($_POST['paykassa_direction'])) {
+            return (string) wp_unslash($_POST['paykassa_direction']);
+        }
+        // Old custom classic templates submitted only a system key. Retain
+        // that path only when its provider network has one crypto asset.
+        $legacy = isset($_POST['paykassa_system']) ? sanitize_key((string) wp_unslash($_POST['paykassa_system'])) : '';
+        $matches = array_filter((new PaymentSystemRegistry())->directions(), static fn (array $direction): bool => $direction['system_key'] === $legacy);
+        return 1 === count($matches) ? (string) array_key_first($matches) : '';
     }
 }

@@ -33,18 +33,16 @@ final class PayKassaPaymentMethod extends AbstractPaymentMethodType
     public function get_payment_method_data(): array
     {
         $currency = get_woocommerce_currency();
-        $systems = array();
-        foreach (( new PaymentSystemRegistry() )->all() as $key => $system) {
-            if (( new GatewayAvailability() )->enabled((string) $key, $this->settings) && in_array(strtoupper($currency), $system['currencies'], true)) {
-                $systems[] = array( 'value' => $key, 'label' => $system['label'] . ' — ' . $currency );
-            }
+        $directions = array();
+        foreach ((new GatewayAvailability())->directions_for_order_currency($currency, $this->settings) as $key => $direction) {
+            $directions[] = array('value' => $key, 'label' => $direction['label']);
         }
         return array(
             'title' => $this->settings['title'] ?? __('Cryptocurrency (PayKassa)', 'paykassa'),
             'description' => $this->settings['description'] ?? __('Pay securely with cryptocurrency through PayKassa.', 'paykassa'),
             'supports' => array( 'products' ),
             'available' => ( new GatewayAvailability() )->for_currency($currency, $this->settings),
-            'systems' => $systems,
+            'directions' => $directions,
         );
     }
 }

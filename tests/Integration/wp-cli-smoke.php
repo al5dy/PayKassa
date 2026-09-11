@@ -1,6 +1,7 @@
 <?php
 
 use Al5dy\PayKassaWoo\Gateway\PayKassaGateway;
+use Al5dy\PayKassaWoo\Gateway\GatewayAvailability;
 use Al5dy\PayKassaWoo\Order\OrderMeta;
 use Al5dy\PayKassaWoo\Order\PaymentSnapshot;
 use Al5dy\PayKassaWoo\Order\PaymentState;
@@ -19,11 +20,11 @@ function paykassa_smoke_assert(bool $condition, string $message): void
     }
 }
 
-function paykassa_smoke_order(): WC_Order
+function paykassa_smoke_order(string $currency = 'BTC', string $total = '1.00000000'): WC_Order
 {
     $order = wc_create_order();
-    $order->set_currency('BTC');
-    $order->set_total('1.00000000');
+    $order->set_currency($currency);
+    $order->set_total($total);
     $order->set_payment_method('paykassa');
     $order->set_payment_method_title('PayKassa');
     $order->save();
@@ -37,6 +38,8 @@ $transactions = array();
 $active_order_id = 0;
 $create_calls = 0;
 $amounts = array();
+$currencies = array();
+$systems = array();
 
 $settings = array(
     'enabled' => 'yes',
@@ -51,14 +54,27 @@ $settings = array(
 update_option('woocommerce_paykassa_settings', $settings, false);
 update_option('woocommerce_currency', 'BTC', false);
 
-$transport = static function ($preempt, array $args, string $url) use (&$active_order_id, &$create_calls, &$amounts): array {
+$transport = static function ($preempt, array $args, string $url) use (&$active_order_id, &$create_calls, &$amounts, &$currencies, &$systems): array {
     $body = is_array($args['body'] ?? null) ? $args['body'] : array();
+    if ('https://currency.paykassa.pro/pairs.php' === $url) {
+        $pairs = isset($body['pairs']) && is_array($body['pairs']) ? $body['pairs'] : array();
+        $pair = isset($pairs[0]) && is_string($pairs[0]) ? $pairs[0] : '';
+        if ('USD_USDT' !== $pair && 'USD_BTC' !== $pair && 'USD_ETH' !== $pair && 'EUR_USDT' !== $pair) {
+            throw new RuntimeException('Unexpected PayKassa currency pair: ' . $pair);
+        }
+        $rates = array('USD_USDT' => '0.99843217', 'USD_BTC' => '0.00001295', 'USD_ETH' => '0.00042', 'EUR_USDT' => '1.17000000');
+        $payload = array('error' => false, 'message' => 'OK', 'data' => array(array($pair => $rates[$pair])));
+        return array('headers' => array(), 'body' => wp_json_encode($payload), 'response' => array('code' => 200, 'message' => 'OK'), 'cookies' => array(), 'filename' => null);
+    }
     $function = $body['func'] ?? '';
     if ('1' !== ( $body['test'] ?? '' )) {
         throw new RuntimeException('PayKassa SCI sandbox requests must send test=1.');
     }
     if ('sci_create_order' === $function) {
         ++$create_calls;
+        $amounts[(int) $body['order_id']] = (string) $body['amount'];
+        $currencies[(int) $body['order_id']] = (string) $body['currency'];
+        $systems[(int) $body['order_id']] = array(11 => 'BitCoin', 12 => 'Ethereum', 30 => 'TRON_TRC20')[(int) $body['system']] ?? '';
         $hash = hash('sha256', (string) $body['order_id']);
         $payload = array('error' => false, 'message' => 'OK', 'data' => array('url' => 'https://paykassa.app/pay/smoke?hash=' . $hash, 'params' => array('hash' => $hash)));
     } elseif ('sci_confirm_order' === $function) {
@@ -67,8 +83,8 @@ $transport = static function ($preempt, array $args, string $url) use (&$active_
             'transaction' => 'transaction-' . $active_order_id,
             'hash' => hash('sha256', (string) $active_order_id),
             'shop_id' => 'test-merchant',
-            'currency' => 'BTC',
-            'system' => 'BitCoin',
+            'currency' => $currencies[$active_order_id] ?? 'BTC',
+            'system' => $systems[$active_order_id] ?? 'BitCoin',
             'amount' => $amounts[$active_order_id] ?? '1.00000000',
             'address' => 'bc1qsmoketestaddress',
             'tag' => '',
@@ -114,6 +130,33 @@ try {
     $duplicate = $processor->process($evidence);
     $notes_after_duplicate = count(wc_get_order_notes(array('order_id' => $order->get_id())));
     paykassa_smoke_assert($duplicate['accepted'] && $notes_before_duplicate === $notes_after_duplicate, 'Duplicate webhook must be acknowledged without a second order note or settlement.');
+
+    $fiat_settings = $settings + array(
+        'accepted_order_currencies' => array('USD', 'EUR', 'USDT'),
+        'enabled_payment_directions' => array('tron_trc20:USDT', 'bitcoin:BTC', 'ethereum:ETH'),
+    );
+    update_option('woocommerce_paykassa_settings', $fiat_settings, false);
+    update_option('woocommerce_currency', 'USD', false);
+    $fiat_availability = new GatewayAvailability();
+    paykassa_smoke_assert($fiat_availability->for_currency('USD', $fiat_settings), 'USD must have an enabled PayKassa conversion direction in the settings model: ' . implode(',', array_keys($fiat_availability->directions_for_order_currency('USD', $fiat_settings))));
+    $fiat_gateway = new PayKassaGateway();
+    paykassa_smoke_assert($fiat_gateway->is_available(), 'Gateway must be available for an explicitly enabled USD order currency.');
+
+    $usd_usdt = paykassa_smoke_order('USD', '100.00');
+    $orders[] = $usd_usdt->get_id();
+    $_POST['paykassa_direction'] = 'tron_trc20:USDT';
+    paykassa_smoke_assert('success' === $fiat_gateway->process_payment($usd_usdt->get_id())['result'], 'USD to USDT payment creation must use the PayKassa quote.');
+    $usd_usdt = wc_get_order($usd_usdt->get_id());
+    $usd_usdt_snapshot = PaymentSnapshot::from_json((string) $usd_usdt->get_meta(OrderMeta::SNAPSHOT, true));
+    paykassa_smoke_assert($usd_usdt_snapshot instanceof PaymentSnapshot && '100.00' === $usd_usdt_snapshot->expected_amount && 'USD' === $usd_usdt_snapshot->order_currency && '99.843217' === $usd_usdt_snapshot->payment_amount && 'USDT' === $usd_usdt_snapshot->provider_currency && 'TRON_TRC20' === $usd_usdt_snapshot->provider_system && 'USD_USDT' === $usd_usdt_snapshot->conversion_pair, 'Fiat snapshot must retain independent order and payment money with the PayKassa quote.');
+    paykassa_smoke_assert('USD' === $usd_usdt->get_currency() && '100.00' === $usd_usdt->get_total(), 'Creating a crypto invoice must not alter WooCommerce order money.');
+    $active_order_id = $usd_usdt->get_id();
+    $usd_usdt_evidence = $client->verify_ipn('valid-private-hash-for-usd-usdt');
+    $transactions[] = $usd_usdt_evidence->transaction_id;
+    paykassa_smoke_assert($processor->process($usd_usdt_evidence)['accepted'], 'Verified USD to USDT evidence must settle through the common idempotent pipeline.');
+    $usd_usdt = wc_get_order($usd_usdt->get_id());
+    paykassa_smoke_assert($usd_usdt instanceof WC_Order && $usd_usdt->has_status(wc_get_is_paid_statuses()) && 'USD' === $usd_usdt->get_currency(), 'Fiat order must remain USD after crypto settlement.');
+    unset($_POST['paykassa_direction']);
 
     $wrong_merchant = paykassa_smoke_order();
     $orders[] = $wrong_merchant->get_id();

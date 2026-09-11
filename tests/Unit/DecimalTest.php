@@ -19,4 +19,11 @@ final class DecimalTest extends TestCase
         self::assertFalse(Decimal::equal('abc', 'def'));
         self::assertFalse(Decimal::equal('', ''));
     }
+
+    public function test_multiplies_rate_and_order_amount_without_float_rounding(): void
+    {
+        self::assertSame('99.843217', Decimal::multiply('100.00', '0.99843217'));
+        self::assertSame('0.0000001295', Decimal::multiply('0.01', '0.00001295'));
+        self::assertSame('12949999.8705', Decimal::multiply('999999.99', '12.95'));
+    }
 }

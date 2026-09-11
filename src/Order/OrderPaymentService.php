@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Al5dy\PayKassaWoo\Order;
 
 use Al5dy\PayKassaWoo\Gateway\RedirectUrlValidator;
+use Al5dy\PayKassaWoo\Gateway\GatewayAvailability;
+use Al5dy\PayKassaWoo\PayKassa\CurrencyRateClient;
 use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\PayKassa\PaymentSystemRegistry;
@@ -12,8 +14,8 @@ use Al5dy\PayKassaWoo\PayKassa\Exception\ProviderUnavailableException;
 
 final class OrderPaymentService
 {
-    /** @param array<string, string> $settings */
-    public function create_or_reuse(\WC_Order $order, array $settings, string $system_key): string
+    /** @param array<string, mixed> $settings */
+    public function create_or_reuse(\WC_Order $order, array $settings, string $direction_key): string
     {
         $existing = PaymentSnapshot::from_json((string) $order->get_meta(OrderMeta::SNAPSHOT, true));
         $url = (string) $order->get_meta('_paykassa_redirect_url', true);
@@ -44,17 +46,28 @@ final class OrderPaymentService
             throw new PayKassaException('A payment request is already being created. Please wait and retry.');
         }
 
-        $currency = strtoupper((string) $order->get_currency());
-        $amount = (string) $order->get_total();
+        $order_currency = strtoupper((string) $order->get_currency());
+        $order_amount = (string) $order->get_total();
         $registry = new PaymentSystemRegistry();
-        if (! $registry->supports_currency($system_key, $currency)) {
+        $direction = $registry->direction($direction_key);
+        if (! is_array($direction) || ! (new GatewayAvailability())->enabled_direction($direction_key, $settings) || ! isset((new GatewayAvailability())->directions_for_order_currency($order_currency, $settings)[$direction_key])) {
             $locks->fail($order->get_id(), $reservation->owner_token);
-            throw new PayKassaException('The selected PayKassa direction cannot accept this order currency.');
+            throw new PayKassaException('The selected PayKassa payment currency and network are unavailable for this order.');
+        }
+
+        // A failed rate request has not contacted SCI and therefore cannot
+        // create an invoice. Release the reservation so checkout can obtain a
+        // fresh quote on retry; do not treat it as an ambiguous SCI timeout.
+        try {
+            $quote = (new CurrencyRateClient())->quote($order_amount, $order_currency, $direction['currency'], $direction['system']);
+        } catch (PayKassaException $exception) {
+            $locks->fail($order->get_id(), $reservation->owner_token);
+            throw $exception;
         }
 
         try {
             $comment = sprintf('WooCommerce order #%s', $order->get_order_number());
-            $result = (new PayKassaClientFactory())->sci($settings)->create_payment($amount, $system_key, $currency, $order->get_id(), $comment);
+            $result = (new PayKassaClientFactory())->sci($settings)->create_payment($quote->payment_amount, $direction['system_key'], $direction['currency'], $order->get_id(), $comment);
             if (! RedirectUrlValidator::is_valid($result->redirect_url)) {
                 $locks->uncertain($order->get_id(), $reservation->owner_token);
                 throw new PayKassaException('PayKassa returned an unsafe payment URL.');
@@ -65,13 +78,16 @@ final class OrderPaymentService
             // password. Existing invoices are verified against this snapshot,
             // not today's test/live setting after a credential rotation.
             $context = hash('sha256', (string) ($settings['shop_id'] ?? '') . "\0" . $environment);
-            $snapshot = new PaymentSnapshot($order->get_id(), $amount, $currency, $result->system, $result->currency, $result->invoice_id, gmdate('c'), 'test' === $environment, 'hosted', $context, '', (string) ($settings['shop_id'] ?? ''));
+            $snapshot = new PaymentSnapshot($order->get_id(), $order_amount, $order_currency, $result->system, $result->currency, $result->invoice_id, gmdate('c'), 'test' === $environment, 'hosted', $context, '', (string) ($settings['shop_id'] ?? ''), $quote->payment_amount, $quote->rate_pair, $quote->exchange_rate, $quote->source, $quote->quoted_at);
             PaymentState::assert_transition((string) $order->get_meta(OrderMeta::STATE, true), PaymentState::AWAITING_PAYMENT);
             $order->update_meta_data(OrderMeta::SNAPSHOT, wp_json_encode($snapshot->to_array()));
             $order->update_meta_data(OrderMeta::STATE, PaymentState::AWAITING_PAYMENT);
             $order->update_meta_data('_paykassa_redirect_url', $result->redirect_url);
             $order->update_meta_data('_paykassa_provider_system', $result->system);
             $order->update_meta_data('_paykassa_provider_currency', $result->currency);
+            $order->update_meta_data('_paykassa_payment_amount', $quote->payment_amount);
+            $order->update_meta_data('_paykassa_conversion_pair', $quote->rate_pair);
+            $order->update_meta_data('_paykassa_conversion_rate', $quote->exchange_rate);
             $order->update_meta_data(OrderMeta::PAYMENT_LINK_HASH, $result->invoice_id);
             // Compatibility only: legacy versions mislabeled this link hash as
             // an invoice id. New domain logic never reads this key.

@@ -16,4 +16,13 @@ final class PaymentSystemRegistryTest extends TestCase
         self::assertTrue($registry->supports_currency('ton', 'USDT'));
         self::assertFalse($registry->supports_currency('bitcoin', 'USDT'));
     }
+
+    public function test_direction_identity_includes_both_currency_and_network(): void
+    {
+        $registry = new PaymentSystemRegistry();
+        self::assertSame('USDT', $registry->direction('tron_trc20:usdt')['currency']);
+        self::assertSame('TRON_TRC20', $registry->direction('tron_trc20:USDT')['system']);
+        self::assertSame('BTC', $registry->direction('bitcoin:BTC')['currency']);
+        self::assertNull($registry->direction('tron_trc20:BTC'));
+    }
 }

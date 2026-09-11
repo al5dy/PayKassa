@@ -53,4 +53,35 @@ final class PaymentSystemRegistry
         $system = $this->get($key);
         return is_array($system) && in_array(strtoupper($currency), $system['currencies'], true);
     }
+
+    /** @return array<string, array{system_key:string,currency:string,system:string,label:string}> */
+    public function directions(): array
+    {
+        $directions = array();
+        foreach ($this->all() as $key => $system) {
+            if (! is_array($system) || ! isset($system['currencies'], $system['system'], $system['label']) || ! is_array($system['currencies'])) {
+                continue;
+            }
+            foreach ($system['currencies'] as $currency) {
+                if (! is_string($currency)) {
+                    continue;
+                }
+                $currency = strtoupper($currency);
+                $direction_key = sanitize_key((string) $key) . ':' . $currency;
+                $directions[$direction_key] = array('system_key' => sanitize_key((string) $key), 'currency' => $currency, 'system' => (string) $system['system'], 'label' => $currency . ' — ' . (string) $system['label']);
+            }
+        }
+        return $directions;
+    }
+
+    /** @return array{system_key:string,currency:string,system:string,label:string}|null */
+    public function direction(string $direction): ?array
+    {
+        $parts = explode(':', $direction, 2);
+        if (2 !== count($parts)) {
+            return null;
+        }
+        $key = sanitize_key($parts[0]) . ':' . strtoupper($parts[1]);
+        return $this->directions()[$key] ?? null;
+    }
 }

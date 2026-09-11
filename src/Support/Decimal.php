@@ -26,4 +26,40 @@ final class Decimal
         $fraction = isset($parts[1]) ? rtrim($parts[1], '0') : '';
         return '' === $fraction ? $whole : $whole . '.' . $fraction;
     }
+
+    /** Multiply unsigned decimal strings without using binary floating point. */
+    public static function multiply(string $left, string $right): string
+    {
+        $left = self::normalise($left);
+        $right = self::normalise($right);
+        if ('' === $left || '' === $right) {
+            return '';
+        }
+        $left_parts = explode('.', $left, 2);
+        $right_parts = explode('.', $right, 2);
+        $left_fraction = $left_parts[1] ?? '';
+        $right_fraction = $right_parts[1] ?? '';
+        $left_digits = ltrim($left_parts[0] . $left_fraction, '0');
+        $right_digits = ltrim($right_parts[0] . $right_fraction, '0');
+        if ('' === $left_digits || '' === $right_digits) {
+            return '0';
+        }
+        $digits = array_fill(0, strlen($left_digits) + strlen($right_digits), 0);
+        for ($left_index = strlen($left_digits) - 1; $left_index >= 0; --$left_index) {
+            for ($right_index = strlen($right_digits) - 1; $right_index >= 0; --$right_index) {
+                $digits[$left_index + $right_index + 1] += (int) $left_digits[$left_index] * (int) $right_digits[$right_index];
+            }
+        }
+        for ($index = count($digits) - 1; $index > 0; --$index) {
+            $digits[$index - 1] += intdiv($digits[$index], 10);
+            $digits[$index] %= 10;
+        }
+        $product = ltrim(implode('', $digits), '0');
+        $scale = strlen($left_fraction) + strlen($right_fraction);
+        if (0 === $scale) {
+            return '' === $product ? '0' : $product;
+        }
+        $product = str_pad('' === $product ? '0' : $product, $scale + 1, '0', STR_PAD_LEFT);
+        return self::normalise(substr($product, 0, -$scale) . '.' . substr($product, -$scale));
+    }
 }
