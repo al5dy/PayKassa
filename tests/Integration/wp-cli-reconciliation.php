@@ -182,6 +182,27 @@ try {
         $check(false === get_option('paykassa_last_reconciliation', false), 'No successful recovery timestamp for ' . $scenario);
     }
 
+    // Two identical invoices cannot be distinguished by amount/currency or a
+    // public hash. Unknown history identity must not mutate either WC order.
+    $reset();
+    $ambiguous_a = $make();
+    $ambiguous_b = $make();
+    $before = $payment_calls;
+    $history = array(array(array(
+        'transaction' => 'synthetic-ambiguous-transaction', 'status' => 'yes',
+        'amount' => '1.00000000', 'currency' => 'BTC', 'system' => 'BitCoin',
+        'hash' => $evidence[$ambiguous_a['private_hash']]['hash'],
+    )));
+    $report = $run();
+    $check('needs_review' === $report['status'] && 1 === $report['unverifiable'], 'An ambiguous history row must require review without guessing an order or private token.');
+    $check($before === $payment_calls && ! wc_get_order((int) $ambiguous_a['order_id'])->is_paid() && ! wc_get_order((int) $ambiguous_b['order_id'])->is_paid(), 'Equal-amount invoices must both remain unpaid without verified identity.');
+    $check(false === get_option('paykassa_reconciliation_through_' . $context, false), 'Unknown identity must not advance the recovery watermark.');
+    $reset();
+    $history = array(array(array('order_id' => $ambiguous_a['order_id'], 'private_hash' => $ambiguous_b['private_hash'])));
+    $report = $run();
+    $check('needs_review' === $report['status'] && 1 === $report['unverifiable'] && $before === $payment_calls, 'A valid token for a different existing order must not settle either candidate.');
+    $check(! wc_get_order((int) $ambiguous_a['order_id'])->is_paid() && ! wc_get_order((int) $ambiguous_b['order_id'])->is_paid(), 'Conflicting discovery and verified identities cannot be silently rebound.');
+
     $reset();
     $cancelled = $make();
     wc_get_order((int) $cancelled['order_id'])->update_status('cancelled');
@@ -346,6 +367,24 @@ try {
     $scheduler->schedule();
     $actions = as_get_scheduled_actions(array('hook' => ReconciliationScheduler::HOOK, 'group' => 'paykassa', 'status' => 'pending'), 'ids');
     $check(1 === count($actions), 'Repeated scheduling must remain unique.');
+    // Exercise the real AS running -> completed lifecycle, including the
+    // uniqueness guard that would prevent a running continuation scheduling itself.
+    $reset();
+    $history = array(array_fill(0, 25, array('status' => 'yes')));
+    $execute_action = static function (int $action_id) use ($check): void {
+        ActionScheduler_QueueRunner::instance()->process_action($action_id, 'paykassa-recovery-test');
+        $logs = array_map(static fn($entry): string => $entry->get_message(), ActionScheduler::logger()->get_logs($action_id));
+        $check('complete' === ActionScheduler::store()->get_status($action_id), 'Recovery action must complete: ' . implode(' | ', $logs));
+    };
+    $execute_action((int) $actions[0]);
+    for ($batch = 0; $batch < 2; ++$batch) {
+        $continuations = as_get_scheduled_actions(array('hook' => ReconciliationScheduler::CONTINUE_HOOK, 'group' => 'paykassa', 'status' => 'pending'), 'ids');
+        $check(1 === count($continuations), 'AS must enqueue exactly one next batch after completing the current batch: ' . wp_json_encode(array('batch' => $batch, 'pending' => count($continuations), 'report' => get_option(ReconciliationService::REPORT_OPTION))));
+        $execute_action((int) $continuations[0]);
+    }
+    $scheduled_report = get_option(ReconciliationService::REPORT_OPTION);
+    $check('needs_review' === $scheduled_report['status'] && 25 === $scheduled_report['unverifiable'], 'AS must consume all bounded batches without claiming unknown history records as paid.');
+    $check(false === get_option(ReconciliationService::JOB_OPTION, false), 'AS final batch must finish the saved job.');
     $other = as_schedule_single_action(time() + 3600, 'unrelated_test_job', array(), 'other');
     ReconciliationScheduler::unschedule();
     $check(! as_has_scheduled_action(ReconciliationScheduler::HOOK, array(), 'paykassa') && as_has_scheduled_action('unrelated_test_job', array(), 'other'), 'Cleanup must not touch other jobs.');
