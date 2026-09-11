@@ -16,6 +16,9 @@ final class HistoryPage
     /** @param array<string, mixed> $response */
     public static function from_response(array $response, int $page): self
     {
+        if (self::is_no_data_response($response, $page)) {
+            return new self(array(), 0, hash('sha256', '[]'));
+        }
         $data = $response['data'] ?? null;
         $count = is_array($data) ? ($data['page_count'] ?? null) : null;
         if (is_string($count) && preg_match('/^(?:0|[1-9][0-9]{0,4})$/D', $count)) {
@@ -39,5 +42,17 @@ final class HistoryPage
         }
         // Persist no raw rows or tokens, even when detecting changing pages.
         return new self($candidates, $count, hash('sha256', (string) json_encode($list)));
+    }
+
+    /** @param array<string, mixed> $response */
+    private static function is_no_data_response(array $response, int $page): bool
+    {
+        if (0 !== $page || true !== ($response['error'] ?? null) || 'No data' !== ($response['message'] ?? null)) {
+            return false;
+        }
+        if (array() !== array_diff(array_keys($response), array('error', 'message', 'data'))) {
+            return false;
+        }
+        return ! array_key_exists('data', $response) || array() === $response['data'];
     }
 }

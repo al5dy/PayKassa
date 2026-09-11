@@ -36,7 +36,7 @@ $from = gmdate('c', time() - 7 * DAY_IN_SECONDS);
 $to = gmdate('c', time() - 60);
 $context = hash('sha256', "recovery-merchant\0synthetic-api-id\0yes");
 $reset = static function () use ($context): void {
-    foreach (array(ReconciliationService::JOB_OPTION, ReconciliationService::REPORT_OPTION, 'paykassa_last_reconciliation', 'paykassa_last_history_scan', 'paykassa_reconciliation_through_' . $context) as $key) {
+    foreach (array(ReconciliationService::JOB_OPTION, ReconciliationService::REPORT_OPTION, 'paykassa_last_reconciliation', 'paykassa_last_history_scan', 'paykassa_last_reconciliation_error', 'paykassa_reconciliation_through_' . $context) as $key) {
         delete_option($key);
     }
 };
@@ -103,6 +103,8 @@ $retry_now = static function (): void {
 try {
     $expected_hpos = getenv('PAYKASSA_EXPECT_HPOS');
     $check(in_array($expected_hpos, array('yes', 'no'), true) && ('yes' === $expected_hpos) === OrderUtil::custom_orders_table_usage_is_enabled(), 'Requested HPOS store must actually be active.');
+    $gateway = new PayKassaGateway();
+    $check('no' === $gateway->form_fields['reconciliation_enabled']['default'], 'Unattended reconciliation must remain disabled by default.');
     $reset();
     $records = array();
     for ($i = 0; $i < 12; ++$i) {
@@ -231,6 +233,24 @@ try {
     $report = $run();
     $check(1 === $report['recovered'] && '1' === end($requests)['test'], 'Verification must use the snapshot environment.');
     update_option('woocommerce_paykassa_settings', $settings, false);
+
+    // The exact sandbox no-result envelope is an empty first page, not an
+    // outage. Similar provider errors must still fail closed and back off.
+    $reset();
+    $history = array();
+    $raw_envelope = array('error' => true, 'message' => 'No data');
+    $before = $payment_calls;
+    $report = $run();
+    $check('completed' === $report['status'] && 0 === $report['checked'], 'PayKassa No data must complete an empty reconciliation run.');
+    $check(false === get_option(ReconciliationService::JOB_OPTION, false), 'No data must not leave a retry/backoff checkpoint.');
+    $check(false === get_option('paykassa_last_reconciliation_error', false), 'No data must not be recorded as a provider outage.');
+    $check($before === $payment_calls, 'An empty history result cannot invoke payment completion.');
+    $reset();
+    $raw_envelope = array('error' => true, 'message' => 'Access is denied. Error code: 10.');
+    $check('failed' === $run()['status'], 'Authentication and permission errors must remain fail closed.');
+    $job = get_option(ReconciliationService::JOB_OPTION);
+    $check(is_array($job) && $job['retry_at'] > time(), 'A provider rejection other than exact No data must retain backoff state.');
+    $raw_envelope = null;
 
     // API failure/backoff never advances the cursor or reports recovery success.
     $reset();

@@ -17,7 +17,10 @@ use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\Webhook\WebhookEventStore;
 use Al5dy\PayKassaWoo\Webhook\WebhookProcessor;
 
-/** History discovers candidates; only SCI-verified evidence enters settlement. */
+/**
+ * History discovers candidates; only SCI-verified evidence enters settlement.
+ * Invoice-to-TXID lookup data is never accepted as a recovery authority.
+ */
 final class ReconciliationService
 {
     public const JOB_OPTION = 'paykassa_reconciliation_job';

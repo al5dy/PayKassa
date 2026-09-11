@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-10T23:25:16+02:00\n"
+"POT-Creation-Date: 2026-09-11T11:12:20+02:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: paykassa\n"
@@ -37,85 +37,101 @@ msgstr ""
 msgid "You are not allowed to run this check."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:56
+#: src/Admin/DiagnosticsPage.php:57
 msgid "Not active"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:58
-#: src/Admin/DiagnosticsPage.php:60
+#: src/Admin/DiagnosticsPage.php:59
 #: src/Admin/DiagnosticsPage.php:61
+#: src/Admin/DiagnosticsPage.php:62
 msgid "Yes"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:58
-#: src/Admin/DiagnosticsPage.php:60
+#: src/Admin/DiagnosticsPage.php:59
 #: src/Admin/DiagnosticsPage.php:61
+#: src/Admin/DiagnosticsPage.php:62
 msgid "No"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:59
+#: src/Admin/DiagnosticsPage.php:60
 msgid "Test"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:59
+#: src/Admin/DiagnosticsPage.php:60
 msgid "Live"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:63
 #: src/Admin/DiagnosticsPage.php:64
 #: src/Admin/DiagnosticsPage.php:65
+#: src/Admin/DiagnosticsPage.php:66
 msgid "Never"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:64
+#: src/Admin/DiagnosticsPage.php:65
 msgid "Last completed history scan"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:65
+#: src/Admin/DiagnosticsPage.php:66
 msgid "Last recovery error"
 msgstr ""
 
+#: src/Admin/DiagnosticsPage.php:67
+msgid "History recovery capability"
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:68
+msgid "Unsupported in PayKassa Test Mode: history returned no authoritative incoming-payment records during real sandbox validation."
+msgstr ""
+
 #: src/Admin/DiagnosticsPage.php:69
+msgid "Unverified for unattended use until a controlled live lost-webhook payment proves that history provides authoritative matching fields."
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:73
 msgid "Recovery status"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:69
+#: src/Admin/DiagnosticsPage.php:73
 msgid "History records checked"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:69
+#: src/Admin/DiagnosticsPage.php:73
 msgid "Payments recovered"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:69
+#: src/Admin/DiagnosticsPage.php:73
 msgid "Duplicate payments ignored"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:69
+#: src/Admin/DiagnosticsPage.php:73
 msgid "Payments requiring manual review"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:69
+#: src/Admin/DiagnosticsPage.php:73
 msgid "History records without sufficient verification"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:76
+#: src/Admin/DiagnosticsPage.php:80
 msgid "PayKassa payment health"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:80
+#: src/Admin/DiagnosticsPage.php:81
+msgid "Payment recovery is experimental and disabled by default. History records and invoice TXIDs are never sufficient payment evidence; settlement still requires SCI-verified immutable payment facts."
+msgstr ""
+
+#: src/Admin/DiagnosticsPage.php:85
 msgid "Connected: PayKassa API credentials were accepted."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:80
+#: src/Admin/DiagnosticsPage.php:85
 msgid "Connection failed. Check API credentials or PayKassa availability."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:80
+#: src/Admin/DiagnosticsPage.php:85
 msgid "Add API credentials to run the read-only connection test. SCI credentials have no documented read-only test."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:89
+#: src/Admin/DiagnosticsPage.php:94
 msgid "Test API connection"
 msgstr ""
 
@@ -187,16 +203,16 @@ msgstr ""
 msgid "No credentials or HTTPS issue was detected."
 msgstr ""
 
-#: src/Blocks/PayKassaPaymentMethod.php:43
+#: src/Blocks/PayKassaPaymentMethod.php:41
 #: src/Gateway/PayKassaGateway.php:26
-#: src/Gateway/PayKassaGateway.php:35
+#: src/Gateway/PayKassaGateway.php:39
 #: assets/build/blocks.js:4
 msgid "Cryptocurrency (PayKassa)"
 msgstr ""
 
-#: src/Blocks/PayKassaPaymentMethod.php:44
+#: src/Blocks/PayKassaPaymentMethod.php:42
 #: src/Gateway/PayKassaGateway.php:27
-#: src/Gateway/PayKassaGateway.php:36
+#: src/Gateway/PayKassaGateway.php:40
 msgid "Pay securely with cryptocurrency through PayKassa."
 msgstr ""
 
@@ -208,121 +224,141 @@ msgstr ""
 msgid "Provider-verified cryptocurrency payments through PayKassa."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:34
+#: src/Gateway/PayKassaGateway.php:38
 msgid "Enable/Disable"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:34
+#: src/Gateway/PayKassaGateway.php:38
 msgid "Enable PayKassa"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:35
+#: src/Gateway/PayKassaGateway.php:39
 msgid "Title"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:36
+#: src/Gateway/PayKassaGateway.php:40
 msgid "Description"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:37
+#: src/Gateway/PayKassaGateway.php:41
 msgid "Merchant / Shop ID"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:37
+#: src/Gateway/PayKassaGateway.php:41
 msgid "Your PayKassa SCI merchant identifier."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:38
+#: src/Gateway/PayKassaGateway.php:42
 msgid "Merchant secret"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:38
 #: src/Gateway/PayKassaGateway.php:42
+#: src/Gateway/PayKassaGateway.php:47
 msgid "Leave blank when saving to keep the current secret."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:39
+#: src/Gateway/PayKassaGateway.php:43
 msgid "Test mode"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:39
+#: src/Gateway/PayKassaGateway.php:43
 msgid "Use PayKassa test mode"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:40
-msgid "Enabled payment networks"
+#: src/Gateway/PayKassaGateway.php:44
+msgid "Accepted WooCommerce currencies"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:40
-msgid "Comma-separated current PayKassa system keys (for example bitcoin,tron_trc20,ton). Leave empty to enable documented crypto directions compatible with the order currency."
+#: src/Gateway/PayKassaGateway.php:44
+msgid "Show PayKassa only for these WooCommerce order currencies. Fiat orders receive a fresh PayKassa quote only when an invoice is created."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:41
+#: src/Gateway/PayKassaGateway.php:45
+msgid "Enabled crypto payment methods"
+msgstr ""
+
+#: src/Gateway/PayKassaGateway.php:45
+msgid "Choose exact cryptocurrency and network combinations. Existing enabled network settings are preserved during upgrade until this setting is saved."
+msgstr ""
+
+#: src/Gateway/PayKassaGateway.php:46
 msgid "API ID (optional)"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:41
+#: src/Gateway/PayKassaGateway.php:46
 msgid "Only required for connection tests and payment recovery."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:42
+#: src/Gateway/PayKassaGateway.php:47
 msgid "API password (optional)"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:43
+#: src/Gateway/PayKassaGateway.php:48
 msgid "Payment recovery"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:43
+#: src/Gateway/PayKassaGateway.php:48
 msgid "Enable bounded background reconciliation when API credentials are configured"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:44
+#: src/Gateway/PayKassaGateway.php:48
+msgid "Experimental: PayKassa Test Mode history recovery is unsupported. Keep unattended recovery disabled until a controlled live lost-webhook test succeeds."
+msgstr ""
+
+#: src/Gateway/PayKassaGateway.php:49
 msgid "Initial recovery lookback (days)"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:44
+#: src/Gateway/PayKassaGateway.php:49
 msgid "Later runs resume saved progress, including after a long outage. History records without an SCI verification token require review; they are never credited from history alone."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:45
+#: src/Gateway/PayKassaGateway.php:50
 msgid "Debug logging"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:45
+#: src/Gateway/PayKassaGateway.php:50
 msgid "Write redacted diagnostic logs"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:46
+#: src/Gateway/PayKassaGateway.php:51
 msgid "Uninstall cleanup"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:46
+#: src/Gateway/PayKassaGateway.php:51
 msgid "Delete plugin settings and webhook audit data on uninstall"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:97
+#: src/Gateway/PayKassaGateway.php:112
 #: assets/build/blocks.js:17
-msgid "Cryptocurrency network"
+msgid "Pay with cryptocurrency"
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:110
-msgid "Choose an available PayKassa cryptocurrency network."
+#: src/Gateway/PayKassaGateway.php:123
+msgid "Choose an available PayKassa cryptocurrency and network."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:121
+#: src/Gateway/PayKassaGateway.php:134
 msgid "We could not find this order."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:132
+#: src/Gateway/PayKassaGateway.php:145
 msgid "PayKassa payment creation failed. See redacted PayKassa logs for correlation details."
 msgstr ""
 
-#: src/Gateway/PayKassaGateway.php:133
+#: src/Gateway/PayKassaGateway.php:146
 msgid "We could not start the PayKassa payment. Please try another method or contact the store."
 msgstr ""
 
-#: src/Order/OrderPaymentService.php:88
+#: src/Infrastructure/Installer.php:138
+msgid "PayKassa is disabled because this store currency is not supported by the configured PayKassa conversion currencies. Choose a supported Accepted WooCommerce currency in the gateway settings."
+msgstr ""
+
+#: src/Infrastructure/Installer.php:142
+msgid "PayKassa is disabled because no crypto payment methods are enabled. Choose at least one Enabled crypto payment method in the gateway settings."
+msgstr ""
+
+#: src/Order/OrderPaymentService.php:104
 msgid "PayKassa payment invoice created; awaiting provider confirmation."
 msgstr ""
 

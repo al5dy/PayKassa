@@ -27,6 +27,13 @@ final class HistoryContractProbe
             throw new \RuntimeException('invalid_envelope');
         }
         if ($response->error) {
+            if (self::is_no_data_response($response)) {
+                return array(
+                    'status' => 'observed', 'release_ready' => false,
+                    'page_count' => 0, 'item_count' => 0, 'items' => array(),
+                    'provider_result' => 'no_data',
+                );
+            }
             // Provider messages may echo request credentials. Never export them.
             throw new \RuntimeException('provider_rejected');
         }
@@ -50,6 +57,19 @@ final class HistoryContractProbe
             'page_count' => $count, 'item_count' => count($items),
             'items' => $items,
         );
+    }
+
+    private static function is_no_data_response(\stdClass $response): bool
+    {
+        $keys = array_keys(get_object_vars($response));
+        if (array() !== array_diff($keys, array('error', 'message', 'data')) || 'No data' !== ($response->message ?? null)) {
+            return false;
+        }
+        if (! property_exists($response, 'data')) {
+            return true;
+        }
+        return ($response->data instanceof \stdClass && array() === get_object_vars($response->data))
+            || (is_array($response->data) && array() === $response->data);
     }
 
     /** @return string|array<string, mixed> */

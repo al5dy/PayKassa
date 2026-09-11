@@ -47,6 +47,20 @@ final class HistoryContractProbeTest extends TestCase
         self::assertFalse($report['release_ready']);
     }
 
+    public function test_exact_provider_no_data_is_an_empty_observation_not_an_outage(): void
+    {
+        $report = HistoryContractProbe::describe('{"error":true,"message":"No data"}');
+
+        self::assertSame('observed', $report['status']);
+        self::assertSame('no_data', $report['provider_result']);
+        self::assertSame(0, $report['page_count']);
+        self::assertSame(0, $report['item_count']);
+        self::assertFalse($report['release_ready']);
+
+        $with_empty_data = HistoryContractProbe::describe('{"error":true,"message":"No data","data":{}}');
+        self::assertSame('no_data', $with_empty_data['provider_result']);
+    }
+
     #[DataProvider('invalid_responses')]
     public function test_invalid_responses_fail_without_provider_messages(string $response, string $reason): void
     {
@@ -62,6 +76,9 @@ final class HistoryContractProbeTest extends TestCase
             array('{', 'invalid_json'),
             array('{"error":"false"}', 'invalid_envelope'),
             array('{"error":true,"message":"secret"}', 'provider_rejected'),
+            array('{"error":true,"message":"No Data"}', 'provider_rejected'),
+            array('{"error":true,"message":"No data","data":{"unexpected":true}}', 'provider_rejected'),
+            array('{"error":true,"message":"No data","code":0}', 'provider_rejected'),
             array('{"error":false,"data":{"page_count":1,"list":{}}}', 'invalid_history_list'),
             array('{"error":false,"data":{"page_count":1.5,"list":[]}}', 'invalid_page_count'),
         );

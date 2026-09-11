@@ -9,7 +9,12 @@ use Al5dy\PayKassaWoo\PayKassa\Exception\ProviderUnavailableException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\InvalidResponseException;
 use Al5dy\PayKassaWoo\PayKassa\Dto\HistoryPage;
 
-/** Read-only PayKassa API 0.9 adapter for health checks and reconciliation. */
+/**
+ * Read-only PayKassa API 0.9 adapter for health checks and reconciliation.
+ *
+ * api_get_shop_txids is deliberately not exposed: sandbox can return TXIDs
+ * for arbitrary invoice numbers, so that endpoint is not payment evidence.
+ */
 final class ApiClient
 {
     private const ENDPOINT = 'https://paykassa.app/api/0.9/index.php';
@@ -24,7 +29,11 @@ final class ApiClient
     /** @return array<string, mixed> */
     public function merchant_info(string $shop_id): array
     {
-        return $this->request(array( 'func' => 'api_get_merchant_info', 'shop_id' => $shop_id ));
+        $response = $this->request(array( 'func' => 'api_get_merchant_info', 'shop_id' => $shop_id ));
+        if (true === $response['error']) {
+            throw new ProviderUnavailableException('PayKassa API rejected the request.');
+        }
+        return $response;
     }
 
     public function history(string $shop_id, string $from, string $to, int $page = 0): HistoryPage
@@ -32,7 +41,15 @@ final class ApiClient
         if ('' === $shop_id || $page < 0 || $page >= 10000) {
             throw new ConfigurationException('Invalid history request.');
         }
-        return HistoryPage::from_response($this->request(array( 'func' => 'api_get_history', 'shop_id' => $shop_id, 'type' => 'pay_in', 'status' => 'yes', 'page_num' => (string) $page, 'datetime_start' => $from, 'datetime_end' => $to )), $page);
+        $response = $this->request(array( 'func' => 'api_get_history', 'shop_id' => $shop_id, 'type' => 'pay_in', 'status' => 'yes', 'page_num' => (string) $page, 'datetime_start' => $from, 'datetime_end' => $to ));
+        try {
+            return HistoryPage::from_response($response, $page);
+        } catch (InvalidResponseException $exception) {
+            if (true === $response['error']) {
+                throw new ProviderUnavailableException('PayKassa API rejected the request.', 0, $exception);
+            }
+            throw $exception;
+        }
     }
 
     /** @param array<string, string> $payload @return array<string, mixed> */
@@ -46,9 +63,6 @@ final class ApiClient
         $decoded = json_decode((string) wp_remote_retrieve_body($response), true, 32, JSON_BIGINT_AS_STRING);
         if (! is_array($decoded) || ! array_key_exists('error', $decoded) || ! is_bool($decoded['error'])) {
             throw new InvalidResponseException('PayKassa API returned malformed data.');
-        }
-        if (true === $decoded['error']) {
-            throw new ProviderUnavailableException('PayKassa API rejected the request.');
         }
         return $decoded;
     }

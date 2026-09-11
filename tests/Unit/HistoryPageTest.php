@@ -30,6 +30,23 @@ final class HistoryPageTest extends TestCase
         self::assertStringNotContainsString($token, $page->fingerprint);
     }
 
+    public function test_exact_provider_no_data_response_is_an_empty_first_page(): void
+    {
+        $page = HistoryPage::from_response(array('error' => true, 'message' => 'No data'), 0);
+
+        self::assertSame(0, $page->page_count);
+        self::assertSame(array(), $page->candidates);
+        self::assertSame(hash('sha256', '[]'), $page->fingerprint);
+    }
+
+    public function test_exact_provider_no_data_response_accepts_only_empty_data(): void
+    {
+        $page = HistoryPage::from_response(array('error' => true, 'message' => 'No data', 'data' => array()), 0);
+
+        self::assertSame(0, $page->page_count);
+        self::assertSame(array(), $page->candidates);
+    }
+
     #[DataProvider('bad_envelopes')]
     public function test_malformed_pages_are_rejected(array $response, int $page): void
     {
@@ -49,6 +66,11 @@ final class HistoryPageTest extends TestCase
             array(array('error' => false, 'data' => array('page_count' => 1, 'list' => array(array()))), 1),
             array(array('error' => false, 'data' => array('page_count' => 0, 'list' => array(array()))), 0),
             array(array('error' => false, 'data' => array('page_count' => 1, 'list' => array_fill(0, 1001, array()))), 0),
+            array(array('error' => true, 'message' => 'No Data'), 0),
+            array(array('error' => true, 'message' => 'No data '), 0),
+            array(array('error' => true, 'message' => 'No data', 'data' => array('unexpected')), 0),
+            array(array('error' => true, 'message' => 'No data', 'code' => 0), 0),
+            array(array('error' => true, 'message' => 'No data'), 1),
         );
     }
 

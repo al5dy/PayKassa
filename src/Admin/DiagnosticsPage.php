@@ -50,19 +50,23 @@ final class DiagnosticsPage
         }
         $settings = get_option('woocommerce_paykassa_settings', array());
         $settings = is_array($settings) ? $settings : array();
+        $test_mode = 'yes' === ( $settings['testmode'] ?? 'no' );
         $report = array(
             'Plugin version' => PAYKASSA_VERSION,
             'WordPress version' => get_bloginfo('version'),
             'WooCommerce version' => defined('WC_VERSION') ? WC_VERSION : __('Not active', 'paykassa'),
             'PHP version' => PHP_VERSION,
             'HTTPS' => is_ssl() ? __('Yes', 'paykassa') : __('No', 'paykassa'),
-            'Mode' => 'yes' === ( $settings['testmode'] ?? 'no' ) ? __('Test', 'paykassa') : __('Live', 'paykassa'),
+            'Mode' => $test_mode ? __('Test', 'paykassa') : __('Live', 'paykassa'),
             'Merchant credentials configured' => ( '' !== ( $settings['shop_id'] ?? '' ) && '' !== ( $settings['shop_password'] ?? '' ) ) ? __('Yes', 'paykassa') : __('No', 'paykassa'),
             'API credentials configured' => ( '' !== ( $settings['api_id'] ?? '' ) && '' !== ( $settings['api_password'] ?? '' ) ) ? __('Yes', 'paykassa') : __('No', 'paykassa'),
             'Legacy callback URL' => add_query_arg('wc-api', 'wc_gateway_paykassa', home_url('/')),
             'Last reconciliation' => get_option('paykassa_last_reconciliation', __('Never', 'paykassa')),
             __('Last completed history scan', 'paykassa') => get_option('paykassa_last_history_scan', __('Never', 'paykassa')),
             __('Last recovery error', 'paykassa') => get_option('paykassa_last_reconciliation_error', __('Never', 'paykassa')),
+            __('History recovery capability', 'paykassa') => $test_mode
+                ? __('Unsupported in PayKassa Test Mode: history returned no authoritative incoming-payment records during real sandbox validation.', 'paykassa')
+                : __('Unverified for unattended use until a controlled live lost-webhook payment proves that history provides authoritative matching fields.', 'paykassa'),
         );
         $recovery = get_option(ReconciliationService::REPORT_OPTION, array());
         if (is_array($recovery)) {
@@ -74,6 +78,7 @@ final class DiagnosticsPage
             }
         }
         echo '<div class="wrap"><h1>' . esc_html__('PayKassa payment health', 'paykassa') . '</h1>';
+        echo '<div class="notice notice-warning"><p>' . esc_html__('Payment recovery is experimental and disabled by default. History records and invoice TXIDs are never sufficient payment evidence; settlement still requires SCI-verified immutable payment facts.', 'paykassa') . '</p></div>';
         $connection_key = 'paykassa_connection_test_' . get_current_user_id();
         $result = get_transient($connection_key);
         if (false !== $result) {
