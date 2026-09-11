@@ -58,3 +58,5 @@ for hpos in no yes; do
     PAYKASSA_EXPECT_HPOS="$hpos" "${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-smoke.php" --use-include
     PAYKASSA_EXPECT_HPOS="$hpos" "${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-reconciliation.php" --use-include
 done
+"${wp_cli[@]}" plugin deactivate paykassa
+"${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-uninstall-smoke.php" --use-include
