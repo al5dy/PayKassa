@@ -75,11 +75,8 @@ final class SciClient
                 throw new WebhookVerificationException('Verification response has invalid field types.');
             }
         }
-        foreach (array('address', 'tag') as $key) {
-            if (isset($data[$key]) && (! is_string($data[$key]) || strlen($data[$key]) > 256)) {
-                throw new WebhookVerificationException('Verification response has invalid address data.');
-            }
-        }
+        $address = self::normalize_optional_address_metadata($data['address'] ?? null);
+        $tag = self::normalize_optional_address_metadata($data['tag'] ?? null);
         $order_id = filter_var($data['order_id'] ?? null, FILTER_VALIDATE_INT, array( 'options' => array( 'min_range' => 1 ) ));
         $transaction = isset($data['transaction']) ? (string) $data['transaction'] : '';
         $amount = isset($data['amount']) && is_string($data['amount']) ? $data['amount'] : '';
@@ -93,7 +90,18 @@ final class SciClient
         if (! Decimal::equal($amount, $amount) || Decimal::equal($amount, '0') || 'no' !== ($data['partial'] ?? null)) {
             throw new WebhookVerificationException('Partial or ambiguous payment evidence cannot settle automatically.');
         }
-        return new PaymentEvidence((int) $order_id, $transaction, Logger::fingerprint($private_hash), $amount, $currency, $system, (string) ( $data['address'] ?? '' ), (string) ( $data['tag'] ?? '' ), $shop_id, $payment_link_hash, $this->test_mode ? 'test' : 'live');
+        return new PaymentEvidence((int) $order_id, $transaction, Logger::fingerprint($private_hash), $amount, $currency, $system, $address, $tag, $shop_id, $payment_link_hash, $this->test_mode ? 'test' : 'live');
+    }
+
+    private static function normalize_optional_address_metadata(mixed $value): string
+    {
+        if (false === $value || null === $value) {
+            return '';
+        }
+        if (! is_string($value) || strlen($value) > 256) {
+            throw new WebhookVerificationException('Verification response has invalid address data.');
+        }
+        return $value;
     }
 
     /** @param array<string, string> $payload @return array<string, mixed> */

@@ -1,0 +1,16 @@
+{
+  "error": false,
+  "message": "Payment successfully confirmed",
+  "data": {
+    "order_id": "143",
+    "transaction": "292207",
+    "shop_id": "30298",
+    "amount": "2.000000",
+    "currency": "USDT",
+    "system": "Ethereum_ERC20",
+    "address": "0x1234567890abcdef1234567890abcdef12345678",
+    "tag": false,
+    "partial": "no",
+    "hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  }
+}
