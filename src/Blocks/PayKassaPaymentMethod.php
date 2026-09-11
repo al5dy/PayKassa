@@ -26,6 +26,7 @@ final class PayKassaPaymentMethod extends AbstractPaymentMethodType
     {
         $handle = 'paykassa-blocks';
         wp_register_script($handle, PAYKASSA_URL . 'assets/build/blocks.js', array( 'wc-blocks-registry', 'wc-settings', 'wp-element', 'wp-i18n' ), PAYKASSA_VERSION, true);
+        wp_set_script_translations($handle, 'paykassa', PAYKASSA_DIR . 'languages');
         return array( $handle );
     }
 

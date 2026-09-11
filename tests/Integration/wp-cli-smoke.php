@@ -1,5 +1,6 @@
 <?php
 
+use Al5dy\PayKassaWoo\Blocks\PayKassaPaymentMethod;
 use Al5dy\PayKassaWoo\Gateway\PayKassaGateway;
 use Al5dy\PayKassaWoo\Gateway\GatewayAvailability;
 use Al5dy\PayKassaWoo\Order\OrderMeta;
@@ -133,6 +134,18 @@ add_filter('pre_wp_mail', $mail_transport);
 try {
     $expected_hpos = getenv('PAYKASSA_EXPECT_HPOS');
     paykassa_smoke_assert(in_array($expected_hpos, array('yes', 'no'), true) && ('yes' === $expected_hpos) === OrderUtil::custom_orders_table_usage_is_enabled(), 'Requested HPOS store must actually be active for the invoice lifecycle smoke.');
+
+    $blocks_handles = (new PayKassaPaymentMethod())->get_payment_method_script_handles();
+    $blocks_script = wp_scripts()->registered['paykassa-blocks'] ?? null;
+    paykassa_smoke_assert(
+        array('paykassa-blocks') === $blocks_handles
+        && $blocks_script instanceof _WP_Dependency
+        && isset($blocks_script->textdomain, $blocks_script->translations_path)
+        && 'paykassa' === $blocks_script->textdomain
+        && wp_normalize_path(PAYKASSA_DIR . 'languages') === wp_normalize_path($blocks_script->translations_path),
+        'Checkout Blocks script must register the paykassa translation domain and packaged languages path.'
+    );
+
     $gateway = new PayKassaGateway();
     paykassa_smoke_assert($gateway->is_available(), 'Gateway must be available for configured BTC checkout.');
 
