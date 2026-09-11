@@ -16,6 +16,33 @@ final class Installer
     public const OPTION = 'paykassa_schema_version';
     public const CREDENTIAL_RETENTION_ERROR = 'paykassa_sci_credential_retention_error';
     private const SETTINGS_OPTION = 'woocommerce_paykassa_settings';
+    /**
+     * Exact crypto-only default written by the first fiat-capable release.
+     *
+     * This is deliberately frozen migration history, not a live registry
+     * lookup. Future payment directions must not widen this fingerprint or be
+     * enabled by an old settings migration.
+     *
+     * @var string[]
+     */
+    private const INTERMEDIATE_CRYPTO_CURRENCY_DEFAULT = array(
+        'BTC',
+        'ETH',
+        'LTC',
+        'DOGE',
+        'DASH',
+        'BCH',
+        'XRP',
+        'TRX',
+        'XLM',
+        'BNB',
+        'USDT',
+        'USDC',
+        'ADA',
+        'EOS',
+        'SHIB',
+        'TON',
+    );
 
     public static function activate(): void
     {
@@ -92,7 +119,13 @@ final class Installer
             $changed = true;
         } else {
             $currencies = self::string_list($settings['accepted_order_currencies']);
-            $currencies = array_values(array_unique(array_filter(array_map('strtoupper', $currencies), array($currency_registry, 'supports_quote'))));
+            $currencies = array_values(array_unique(array_map('strtoupper', $currencies)));
+            $store_currency = self::store_currency();
+            if (self::is_intermediate_currency_default($currencies, $store_currency, $settings)) {
+                $currencies = $currency_registry->supports_quote($store_currency) ? array($store_currency) : array();
+            } else {
+                $currencies = array_values(array_filter($currencies, array($currency_registry, 'supports_quote')));
+            }
             if ($currencies !== $settings['accepted_order_currencies']) {
                 $settings['accepted_order_currencies'] = $currencies;
                 $changed = true;
@@ -192,6 +225,29 @@ final class Installer
         $items = is_array($value) ? $value : explode(',', is_string($value) ? $value : '');
         $items = array_filter(array_map(static fn ($item): string => is_string($item) ? trim($item) : '', $items));
         return array_values(array_unique($items));
+    }
+
+    /**
+     * Detects only the complete, generated intermediate default. Smaller or
+     * otherwise customized merchant selections must survive normalization.
+     *
+     * @param string[]             $currencies
+     * @param array<string, mixed> $settings
+     */
+    private static function is_intermediate_currency_default(array $currencies, string $store_currency, array $settings): bool
+    {
+        if (
+            ! array_key_exists('enabled_systems', $settings)
+            || '' === $store_currency
+            || in_array($store_currency, self::INTERMEDIATE_CRYPTO_CURRENCY_DEFAULT, true)
+        ) {
+            return false;
+        }
+
+        $expected = array_values(array_unique(array_merge(array($store_currency), self::INTERMEDIATE_CRYPTO_CURRENCY_DEFAULT)));
+        sort($currencies, SORT_STRING);
+        sort($expected, SORT_STRING);
+        return $currencies === $expected;
     }
 
     /** @param string[] $items @return string[] */

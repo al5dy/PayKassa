@@ -47,10 +47,29 @@ try {
     paykassa_upgrade_assert($migrated === get_option('woocommerce_paykassa_settings', array()), 'Migration must be idempotent and retain normalized settings.');
 
     // Exact partial-refactor state observed in a real upgraded store: the new
-    // key existed as an empty placeholder while the configured legacy system
-    // still carried the merchant's intended payment method.
+    // direction key was an empty placeholder and the accepted-currency field
+    // contained the store currency plus the complete old generated crypto
+    // default. This is migration debris, not a merchant opt-in to every asset.
+    $intermediate_crypto_default = array(
+        'BTC',
+        'ETH',
+        'LTC',
+        'DOGE',
+        'DASH',
+        'BCH',
+        'XRP',
+        'TRX',
+        'XLM',
+        'BNB',
+        'USDT',
+        'USDC',
+        'ADA',
+        'EOS',
+        'SHIB',
+        'TON',
+    );
     $partial_refactor = array_replace($legacy, array(
-        'accepted_order_currencies' => array('USD', 'BTC', 'ETH', 'LTC'),
+        'accepted_order_currencies' => array_merge(array('USD'), $intermediate_crypto_default),
         'enabled_payment_directions' => array(),
         'enabled_systems' => 'tron_trc20',
     ));
@@ -58,10 +77,26 @@ try {
     update_option('woocommerce_paykassa_settings', $partial_refactor, false);
     Installer::migrate_gateway_settings();
     $partial_migrated = get_option('woocommerce_paykassa_settings', array());
-    paykassa_upgrade_assert(array('USD', 'BTC', 'ETH', 'LTC') === ($partial_migrated['accepted_order_currencies'] ?? null), 'Existing supported accepted currencies must survive the partial-refactor migration.');
+    paykassa_upgrade_assert(array('USD') === ($partial_migrated['accepted_order_currencies'] ?? null), 'The generated crypto currency default plus USD must collapse to the current USD store currency.');
     paykassa_upgrade_assert(array('tron_trc20:USDT') === ($partial_migrated['enabled_payment_directions'] ?? null), 'An empty new direction placeholder must migrate the non-empty legacy enabled_systems value.');
     paykassa_upgrade_assert(! array_key_exists('enabled_systems', $partial_migrated), 'Migration must consume the legacy system setting so fallback cannot remain dynamic.');
     paykassa_upgrade_assert((new PayKassaGateway())->is_available(), 'The exact upgraded USD-store fixture must retain gateway availability.');
+    Installer::migrate_gateway_settings();
+    paykassa_upgrade_assert($partial_migrated === get_option('woocommerce_paykassa_settings', array()), 'The repaired partial-refactor settings must remain unchanged on repeated migration.');
+
+    // A smaller selection cannot be the complete generated default and must
+    // remain untouched even while its legacy direction setting is consumed.
+    $custom_partial_refactor = array_replace($legacy, array(
+        'accepted_order_currencies' => array('USD', 'BTC', 'ETH', 'LTC'),
+        'enabled_payment_directions' => array(),
+        'enabled_systems' => 'tron_trc20',
+    ));
+    update_option('woocommerce_paykassa_settings', $custom_partial_refactor, false);
+    Installer::migrate_gateway_settings();
+    $custom_migrated = get_option('woocommerce_paykassa_settings', array());
+    paykassa_upgrade_assert(array('USD', 'BTC', 'ETH', 'LTC') === ($custom_migrated['accepted_order_currencies'] ?? null), 'A genuine custom accepted-currency selection must survive partial-refactor migration.');
+    paykassa_upgrade_assert(array('tron_trc20:USDT') === ($custom_migrated['enabled_payment_directions'] ?? null), 'Custom accepted currencies must not prevent legacy direction migration.');
+    paykassa_upgrade_assert(! array_key_exists('enabled_systems', $custom_migrated), 'Custom-list migration must consume the legacy system setting.');
 
     // After legacy data has been consumed, an explicit empty current list is
     // merchant intent and must remain fail-closed on every later request.
