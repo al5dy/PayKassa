@@ -39,25 +39,41 @@ final class SciCredentialStore
      */
     public function retain(array $settings, bool $seed_legacy_alias = false): string
     {
+        $profile = self::profile($settings);
+        $context = self::context($profile['shop_id'], $profile['shop_password'], 'yes' === $profile['testmode']);
+        if (self::profiles_satisfy(self::profiles(), $profile, $context, $seed_legacy_alias)) {
+            return $context;
+        }
+
         $mutex = new DatabaseMutex();
         if (! $mutex->acquire('sci-credential-store')) {
             throw new ConfigurationException('The SCI credential store is busy.');
         }
         try {
-            return $this->retain_locked($settings, $seed_legacy_alias, $mutex);
+            return $this->retain_locked($profile, $context, $seed_legacy_alias, $mutex);
         } finally {
             $mutex->release();
         }
     }
 
-    /** @param array<string, mixed> $settings */
-    private function retain_locked(array $settings, bool $seed_legacy_alias, DatabaseMutex $mutex): string
+    /**
+     * @param array{shop_id:string,shop_password:string,testmode:string} $profile
+     */
+    private function retain_locked(array $profile, string $context, bool $seed_legacy_alias, DatabaseMutex $mutex): string
     {
         $mutex->assert_owned();
-        $profile = self::profile($settings);
-        $context = self::context($profile['shop_id'], $profile['shop_password'], 'yes' === $profile['testmode']);
-        $profiles = get_option(self::OPTION, array());
-        $profiles = is_array($profiles) ? $profiles : array();
+        // The pre-lock fast-path populated WordPress's option caches. Evict
+        // the value, negative and autoload caches before the mandatory
+        // under-lock re-check so a concurrent writer is never overwritten
+        // from a stale read.
+        wp_cache_delete(self::OPTION, 'options');
+        wp_cache_delete('notoptions', 'options');
+        wp_cache_delete('alloptions', 'options');
+        $profiles = self::profiles();
+        if (self::profiles_satisfy($profiles, $profile, $context, $seed_legacy_alias)) {
+            return $context;
+        }
+
         $record = array(
             'shop_id' => $profile['shop_id'],
             'shop_password' => $profile['shop_password'],
@@ -94,8 +110,8 @@ final class SciCredentialStore
         if (! preg_match('/^[a-f0-9]{64}$/', $context)) {
             return null;
         }
-        $profiles = get_option(self::OPTION, array());
-        if (! is_array($profiles) || ! isset($profiles[$context]) || ! is_array($profiles[$context])) {
+        $profiles = self::profiles();
+        if (! isset($profiles[$context]) || ! is_array($profiles[$context])) {
             return null;
         }
         try {
@@ -108,10 +124,7 @@ final class SciCredentialStore
     /** @return list<string> */
     public function contexts_for_merchant(string $shop_id, bool $test_mode): array
     {
-        $profiles = get_option(self::OPTION, array());
-        if (! is_array($profiles)) {
-            return array();
-        }
+        $profiles = self::profiles();
         $contexts = array();
         foreach ($profiles as $context => $record) {
             if (! is_string($context) || ! is_array($record)) {
@@ -162,5 +175,33 @@ final class SciCredentialStore
             && ($existing['shop_id'] ?? null) === $expected['shop_id']
             && ($existing['shop_password'] ?? null) === $expected['shop_password']
             && ($existing['testmode'] ?? null) === $expected['testmode'];
+    }
+
+    /** @return array<string, mixed> */
+    private static function profiles(): array
+    {
+        $profiles = get_option(self::OPTION, array());
+        return is_array($profiles) ? $profiles : array();
+    }
+
+    /**
+     * @param array<string, mixed>                                   $profiles
+     * @param array{shop_id:string,shop_password:string,testmode:string} $profile
+     */
+    private static function profiles_satisfy(array $profiles, array $profile, string $context, bool $seed_legacy_alias): bool
+    {
+        $record = array(
+            'shop_id' => $profile['shop_id'],
+            'shop_password' => $profile['shop_password'],
+            'testmode' => $profile['testmode'],
+        );
+        if (! isset($profiles[$context]) || ! self::record_matches($profiles[$context], $record)) {
+            return false;
+        }
+        if (! $seed_legacy_alias) {
+            return true;
+        }
+        $legacy_context = self::legacy_context($profile['shop_id'], 'yes' === $profile['testmode']);
+        return isset($profiles[$legacy_context]);
     }
 }

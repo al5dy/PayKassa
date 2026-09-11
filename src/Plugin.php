@@ -31,7 +31,9 @@ final class Plugin
                 return;
             }
         }
-        Installer::migrate_gateway_settings();
+        if (Installer::gateway_settings_migration_required()) {
+            Installer::migrate_gateway_settings();
+        }
         ( new SciCredentialStore() )->register_rotation_guard();
         $settings_problem = Installer::settings_configuration_problem();
         if (null !== $settings_problem) {

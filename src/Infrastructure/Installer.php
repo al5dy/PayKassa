@@ -14,6 +14,8 @@ final class Installer
     // Version 3 adds owner_token to both event and invoice reservations.
     public const SCHEMA_VERSION = '3';
     public const OPTION = 'paykassa_schema_version';
+    public const SETTINGS_MIGRATION_VERSION = '1';
+    public const SETTINGS_MIGRATION_OPTION = 'paykassa_gateway_settings_migration_version';
     public const CREDENTIAL_RETENTION_ERROR = 'paykassa_sci_credential_retention_error';
     private const SETTINGS_OPTION = 'woocommerce_paykassa_settings';
     /**
@@ -107,8 +109,13 @@ final class Installer
      */
     public static function migrate_gateway_settings(): void
     {
+        if (! self::gateway_settings_migration_required()) {
+            return;
+        }
         $settings = get_option(self::SETTINGS_OPTION, false);
         if (! is_array($settings)) {
+            delete_option(self::CREDENTIAL_RETENTION_ERROR);
+            self::mark_gateway_settings_migrated();
             return;
         }
         $changed = false;
@@ -164,6 +171,9 @@ final class Installer
         }
         if ($changed) {
             update_option(self::SETTINGS_OPTION, $settings, false);
+            if ($settings !== get_option(self::SETTINGS_OPTION, false)) {
+                return;
+            }
         }
         if (
             isset($settings['shop_id'], $settings['shop_password'])
@@ -182,10 +192,18 @@ final class Installer
                 // Do not turn a credential-profile storage outage into a
                 // site-wide frontend fatal; expose only a non-secret marker.
                 update_option(self::CREDENTIAL_RETENTION_ERROR, gmdate('c'), false);
+                return;
             }
         } else {
             delete_option(self::CREDENTIAL_RETENTION_ERROR);
         }
+        self::mark_gateway_settings_migrated();
+    }
+
+    public static function gateway_settings_migration_required(): bool
+    {
+        $stored = get_option(self::SETTINGS_MIGRATION_OPTION, '');
+        return ! is_scalar($stored) || version_compare((string) $stored, self::SETTINGS_MIGRATION_VERSION, '<');
     }
 
     /** @return string[] */
@@ -217,6 +235,13 @@ final class Installer
     {
         $currency = function_exists('get_woocommerce_currency') ? get_woocommerce_currency() : get_option('woocommerce_currency', '');
         return strtoupper(is_string($currency) ? $currency : '');
+    }
+
+    private static function mark_gateway_settings_migrated(): void
+    {
+        // This tiny marker is autoloaded so ordinary requests can avoid a
+        // standalone option query as well as the migration and mutex paths.
+        update_option(self::SETTINGS_MIGRATION_OPTION, self::SETTINGS_MIGRATION_VERSION, true);
     }
 
     /** @param mixed $value @return string[] */

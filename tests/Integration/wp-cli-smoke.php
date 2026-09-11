@@ -151,6 +151,21 @@ try {
     $retry = $gateway->process_payment($order->get_id());
     paykassa_smoke_assert('success' === $retry['result'] && 1 === $create_calls, 'Payment retry must reuse the active invoice and not call provider creation again.');
 
+    // Simulate another request holding the global credential-store mutex. A
+    // previously retained identical profile is read-only and must not make a
+    // new checkout compete for that mutex or fail temporarily.
+    $contended_order = paykassa_smoke_order();
+    $orders[] = $contended_order->get_id();
+    $before_contended_create = $create_calls;
+    $credential_mutex = new DatabaseMutex();
+    paykassa_smoke_assert($credential_mutex->acquire('sci-credential-store'), 'Credential contention fixture must acquire its connection-bound mutex.');
+    try {
+        $contended_result = $gateway->process_payment($contended_order->get_id());
+    } finally {
+        $credential_mutex->release();
+    }
+    paykassa_smoke_assert('success' === $contended_result['result'] && $before_contended_create + 1 === $create_calls, 'Checkout must use the matching credential fast-path while another worker owns the credential-store mutex.');
+
     $legacy_order = paykassa_smoke_order();
     $orders[] = $legacy_order->get_id();
     $legacy_hash = hash('sha256', 'legacy-active-link-' . $legacy_order->get_id());
