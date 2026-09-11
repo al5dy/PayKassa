@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Al5dy\PayKassaWoo\Infrastructure;
 
+use Al5dy\PayKassaWoo\PayKassa\CurrencyRegistry;
+use Al5dy\PayKassaWoo\PayKassa\PaymentSystemRegistry;
+
 final class Installer
 {
     // Version 3 adds owner_token to both event and invoice reservations.
     public const SCHEMA_VERSION = '3';
     public const OPTION = 'paykassa_schema_version';
+    private const SETTINGS_OPTION = 'woocommerce_paykassa_settings';
 
     public static function activate(): void
     {
@@ -60,10 +64,111 @@ final class Installer
         dbDelta($sql);
         dbDelta($invoice_sql);
         self::upgrade_legacy_transaction_index($table);
+        self::migrate_gateway_settings();
         if (! self::schema_is_valid()) {
             throw new \RuntimeException('PayKassa database migration verification failed.');
         }
         update_option(self::OPTION, self::SCHEMA_VERSION, false);
+    }
+
+    /**
+     * Converts pre-fiat gateway settings exactly once into the explicit
+     * currency/direction model. Runtime code must never infer old semantics.
+     */
+    public static function migrate_gateway_settings(): void
+    {
+        $settings = get_option(self::SETTINGS_OPTION, false);
+        if (! is_array($settings)) {
+            return;
+        }
+        $changed = false;
+        $currency_registry = new CurrencyRegistry();
+        if (! array_key_exists('accepted_order_currencies', $settings)) {
+            $currency = self::store_currency();
+            $settings['accepted_order_currencies'] = $currency_registry->supports_quote($currency) ? array($currency) : array();
+            $changed = true;
+        } else {
+            $currencies = self::string_list($settings['accepted_order_currencies']);
+            $currencies = array_values(array_unique(array_filter(array_map('strtoupper', $currencies), array($currency_registry, 'supports_quote'))));
+            if ($currencies !== $settings['accepted_order_currencies']) {
+                $settings['accepted_order_currencies'] = $currencies;
+                $changed = true;
+            }
+        }
+
+        $registry = new PaymentSystemRegistry();
+        if (! array_key_exists('enabled_payment_directions', $settings)) {
+            $legacy_systems = self::string_list($settings['enabled_systems'] ?? '');
+            $directions = array();
+            foreach ($registry->directions() as $key => $direction) {
+                if (array() === $legacy_systems || in_array($direction['system_key'], $legacy_systems, true)) {
+                    $directions[] = $key;
+                }
+            }
+            $settings['enabled_payment_directions'] = $directions;
+            $changed = true;
+        } else {
+            $directions = self::normalise_directions(self::string_list($settings['enabled_payment_directions']), $registry);
+            if ($directions !== $settings['enabled_payment_directions']) {
+                $settings['enabled_payment_directions'] = $directions;
+                $changed = true;
+            }
+        }
+        if ($changed) {
+            update_option(self::SETTINGS_OPTION, $settings, false);
+        }
+    }
+
+    /** @return string[] */
+    public static function default_order_currencies(): array
+    {
+        $currency = self::store_currency();
+        return (new CurrencyRegistry())->supports_quote($currency) ? array($currency) : array();
+    }
+
+    /** @return string|null A safe, merchant-actionable configuration warning. */
+    public static function settings_configuration_problem(): ?string
+    {
+        $settings = get_option(self::SETTINGS_OPTION, false);
+        if (! is_array($settings) || 'yes' !== ($settings['enabled'] ?? 'no')) {
+            return null;
+        }
+        $currencies = self::string_list($settings['accepted_order_currencies'] ?? array());
+        if (array() === $currencies) {
+            return __('PayKassa is disabled because this store currency is not supported by the configured PayKassa conversion currencies. Choose a supported Accepted WooCommerce currency in the gateway settings.', 'paykassa');
+        }
+        $directions = self::string_list($settings['enabled_payment_directions'] ?? array());
+        if (array() === $directions) {
+            return __('PayKassa is disabled because no crypto payment methods are enabled. Choose at least one Enabled crypto payment method in the gateway settings.', 'paykassa');
+        }
+        return null;
+    }
+
+    private static function store_currency(): string
+    {
+        $currency = function_exists('get_woocommerce_currency') ? get_woocommerce_currency() : get_option('woocommerce_currency', '');
+        return strtoupper(is_string($currency) ? $currency : '');
+    }
+
+    /** @param mixed $value @return string[] */
+    private static function string_list($value): array
+    {
+        $items = is_array($value) ? $value : explode(',', is_string($value) ? $value : '');
+        $items = array_filter(array_map(static fn ($item): string => is_string($item) ? trim($item) : '', $items));
+        return array_values(array_unique($items));
+    }
+
+    /** @param string[] $items @return string[] */
+    private static function normalise_directions(array $items, PaymentSystemRegistry $registry): array
+    {
+        $directions = array();
+        foreach ($items as $item) {
+            $direction = $registry->direction($item);
+            if (is_array($direction)) {
+                $directions[] = $direction['system_key'] . ':' . $direction['currency'];
+            }
+        }
+        return array_values(array_unique($directions));
     }
 
     public static function schema_is_valid(): bool

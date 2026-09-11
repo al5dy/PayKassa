@@ -85,7 +85,11 @@ $assert_preserved = static function (array $old_rows, array $old_settings) use (
         }
     }
     $assert($old_rows === $records_by_table, 'Migration must preserve historical events, transaction identity, snapshots, leases and timestamps.');
-    $assert($old_settings === get_option('woocommerce_paykassa_settings'), 'Migration must preserve the existing merchant settings and credentials.');
+    $migrated_settings = get_option('woocommerce_paykassa_settings');
+    $assert(is_array($migrated_settings), 'Migration must retain gateway settings as an array.');
+    foreach ($old_settings as $key => $value) {
+        $assert(($migrated_settings[$key] ?? null) === $value, 'Migration must preserve existing merchant settings and credentials.');
+    }
 };
 
 global $wpdb;

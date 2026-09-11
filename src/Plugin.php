@@ -30,6 +30,15 @@ final class Plugin
                 return;
             }
         }
+        Installer::migrate_gateway_settings();
+        $settings_problem = Installer::settings_configuration_problem();
+        if (null !== $settings_problem) {
+            add_action('admin_notices', static function () use ($settings_problem): void {
+                if (current_user_can('manage_woocommerce')) {
+                    echo '<div class="notice notice-warning"><p>' . esc_html($settings_problem) . '</p></div>';
+                }
+            });
+        }
         add_filter('woocommerce_payment_gateways', static function (array $methods): array {
             $methods[] = PayKassaGateway::class;
             return $methods;

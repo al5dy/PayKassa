@@ -30,12 +30,12 @@ final class GatewayAvailability
     public function accepts_order_currency(string $currency, array $settings): bool
     {
         $currency = strtoupper($currency);
-        if (array_key_exists('accepted_order_currencies', $settings)) {
-            $enabled = $settings['accepted_order_currencies'];
-            $enabled = is_array($enabled) ? $enabled : array_filter(array_map('trim', explode(',', (string) $enabled)));
-            return in_array($currency, array_map('strtoupper', $enabled), true) && (new CurrencyRegistry())->supports_quote($currency);
+        if (! array_key_exists('accepted_order_currencies', $settings)) {
+            return false;
         }
-        return in_array($currency, (new CurrencyRegistry())->legacy_order_currencies(), true);
+        $enabled = $settings['accepted_order_currencies'];
+        $enabled = is_array($enabled) ? $enabled : array_filter(array_map('trim', explode(',', (string) $enabled)));
+        return in_array($currency, array_map('strtoupper', $enabled), true) && (new CurrencyRegistry())->supports_quote($currency);
     }
 
     /** @param array<string, mixed> $settings @return array<string, array{system_key:string,currency:string,system:string,label:string}> */
@@ -68,26 +68,19 @@ final class GatewayAvailability
     /** @param array<string, mixed> $settings @return string[] */
     private function enabled_directions(array $settings): array
     {
+        if (! array_key_exists('enabled_payment_directions', $settings)) {
+            return array();
+        }
         $registry = new PaymentSystemRegistry();
-        if (array_key_exists('enabled_payment_directions', $settings)) {
-            $stored = $settings['enabled_payment_directions'];
-            $stored = is_array($stored) ? $stored : array_filter(array_map('trim', explode(',', (string) $stored)));
-            $normalised = array();
-            foreach ($stored as $item) {
-                $direction = $registry->direction((string) $item);
-                if (is_array($direction)) {
-                    $normalised[] = $direction['system_key'] . ':' . $direction['currency'];
-                }
-            }
-            return array_values(array_unique($normalised));
-        }
-        $legacy = array_filter(array_map('sanitize_key', explode(',', (string) ($settings['enabled_systems'] ?? ''))));
-        $enabled = array();
-        foreach ($registry->directions() as $key => $direction) {
-            if (in_array($direction['system_key'], $legacy, true)) {
-                $enabled[] = $key;
+        $stored = $settings['enabled_payment_directions'];
+        $stored = is_array($stored) ? $stored : array_filter(array_map('trim', explode(',', (string) $stored)));
+        $normalised = array();
+        foreach ($stored as $item) {
+            $direction = $registry->direction((string) $item);
+            if (is_array($direction)) {
+                $normalised[] = $direction['system_key'] . ':' . $direction['currency'];
             }
         }
-        return $enabled;
+        return array_values(array_unique($normalised));
     }
 }

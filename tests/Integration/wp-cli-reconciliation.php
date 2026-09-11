@@ -24,7 +24,7 @@ $check = static function (bool $ok, string $message) use (&$assertions): void {
 };
 $original = get_option('woocommerce_paykassa_settings');
 $original_currency = get_option('woocommerce_currency');
-$settings = array('enabled' => 'yes', 'shop_id' => 'recovery-merchant', 'shop_password' => 'synthetic-sci-secret', 'api_id' => 'synthetic-api-id', 'api_password' => 'synthetic-api-secret', 'testmode' => 'yes', 'enabled_systems' => 'bitcoin,ethereum', 'reconciliation_enabled' => 'yes');
+$settings = array('enabled' => 'yes', 'shop_id' => 'recovery-merchant', 'shop_password' => 'synthetic-sci-secret', 'api_id' => 'synthetic-api-id', 'api_password' => 'synthetic-api-secret', 'testmode' => 'yes', 'enabled_systems' => 'bitcoin,ethereum', 'accepted_order_currencies' => array('BTC', 'ETH'), 'enabled_payment_directions' => array('bitcoin:BTC', 'ethereum:ETH'), 'reconciliation_enabled' => 'yes');
 $orders = array();
 $evidence = array();
 $history = array();

@@ -49,6 +49,8 @@ $settings = array(
     'title' => 'PayKassa',
     'description' => 'Test payment',
     'enabled_systems' => 'bitcoin',
+    'accepted_order_currencies' => array('BTC'),
+    'enabled_payment_directions' => array('bitcoin:BTC'),
 );
 
 update_option('woocommerce_paykassa_settings', $settings, false);
@@ -131,10 +133,10 @@ try {
     $notes_after_duplicate = count(wc_get_order_notes(array('order_id' => $order->get_id())));
     paykassa_smoke_assert($duplicate['accepted'] && $notes_before_duplicate === $notes_after_duplicate, 'Duplicate webhook must be acknowledged without a second order note or settlement.');
 
-    $fiat_settings = $settings + array(
+    $fiat_settings = array_replace($settings, array(
         'accepted_order_currencies' => array('USD', 'EUR', 'USDT'),
         'enabled_payment_directions' => array('tron_trc20:USDT', 'bitcoin:BTC', 'ethereum:ETH'),
-    );
+    ));
     update_option('woocommerce_paykassa_settings', $fiat_settings, false);
     update_option('woocommerce_currency', 'USD', false);
     $fiat_availability = new GatewayAvailability();
