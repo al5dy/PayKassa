@@ -6,6 +6,11 @@ namespace Al5dy\PayKassaWoo\Order;
 
 final class InvoiceLockStore
 {
+    public static function creation_mutex_resource(int $order_id): string
+    {
+        return 'invoice-creation:' . $order_id;
+    }
+
     public function acquire(int $order_id): InvoiceReservation
     {
         global $wpdb;

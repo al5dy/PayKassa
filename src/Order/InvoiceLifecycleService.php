@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Al5dy\PayKassaWoo\Order;
 
+use Al5dy\PayKassaWoo\Infrastructure\DatabaseMutex;
 use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 
 /** Coordinates explicit, audited operator resolution of invoice lifecycle states. */
@@ -86,6 +87,20 @@ final class InvoiceLifecycleService
      */
     public function resolve_uncertain_as_failed(\WC_Order $order, int $resolved_by = 0): void
     {
+        $mutex = new DatabaseMutex();
+        if (! $mutex->acquire(InvoiceLockStore::creation_mutex_resource($order->get_id()))) {
+            throw new PayKassaException('The original PayKassa creation worker is still active. Its uncertain result cannot be released yet.');
+        }
+        try {
+            $this->resolve_uncertain_as_failed_guarded($order, $resolved_by, $mutex);
+        } finally {
+            $mutex->release();
+        }
+    }
+
+    private function resolve_uncertain_as_failed_guarded(\WC_Order $order, int $resolved_by, DatabaseMutex $mutex): void
+    {
+        $mutex->assert_owned();
         $order = $this->reload($order);
         $this->assert_unpaid_paykassa_order($order);
         if (! $this->locks->mark_abandoned_creation_uncertain($order->get_id())) {
@@ -123,6 +138,7 @@ final class InvoiceLifecycleService
         // Persist the operator's confirmation before releasing the durable
         // provider-side-effect fence. A failed save therefore stays blocked.
         $order->save();
+        $mutex->assert_owned();
         if (! $this->locks->resolve_uncertain_as_failed($order->get_id())) {
             throw new PayKassaException('The uncertain PayKassa invoice changed concurrently and remains blocked.');
         }

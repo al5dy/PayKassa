@@ -13,7 +13,9 @@ use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\PayKassa\Dto\PaymentEvidence;
 use Al5dy\PayKassaWoo\Webhook\WebhookEventStore;
 use Al5dy\PayKassaWoo\Webhook\WebhookProcessor;
+use Al5dy\PayKassaWoo\Infrastructure\DatabaseMutex;
 use Al5dy\PayKassaWoo\Infrastructure\Logger;
+use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 use Automattic\WooCommerce\Utilities\OrderUtil;
 
 function paykassa_smoke_assert(bool $condition, string $message): void
@@ -362,10 +364,21 @@ try {
     $first_lock = $lock_store->acquire($concurrent_order->get_id());
     $second_lock = $lock_store->acquire($concurrent_order->get_id());
     paykassa_smoke_assert(InvoiceReservation::ACQUIRED === $first_lock->status && InvoiceReservation::BUSY === $second_lock->status && InvoiceLockStatus::PREPARING === $lock_store->status($concurrent_order->get_id()), 'Concurrent invoice preparation must have one reservation owner.');
+    $live_worker_mutex = new DatabaseMutex();
+    paykassa_smoke_assert($live_worker_mutex->acquire(InvoiceLockStore::creation_mutex_resource($concurrent_order->get_id())), 'The simulated live SCI worker must own the connection-bound creation mutex.');
     paykassa_smoke_assert($lock_store->begin_creation($concurrent_order->get_id(), $first_lock->owner_token), 'The owner must explicitly cross the remote provider-create boundary.');
     $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}paykassa_invoice_locks SET lease_expires_at = '2000-01-01 00:00:00' WHERE order_id = %d", $concurrent_order->get_id()));
     $abandoned_remote = $lock_store->acquire($concurrent_order->get_id());
     paykassa_smoke_assert(InvoiceReservation::BUSY === $abandoned_remote->status && InvoiceLockStatus::UNCERTAIN === $lock_store->status($concurrent_order->get_id()), 'An expired lease after the provider boundary must freeze as uncertain and must never auto-reclaim.');
+    $manual_release_blocked = false;
+    try {
+        $lifecycle->resolve_uncertain_as_failed($concurrent_order, 1);
+    } catch (PayKassaException $exception) {
+        $manual_release_blocked = true;
+    } finally {
+        $live_worker_mutex->release();
+    }
+    paykassa_smoke_assert($manual_release_blocked && InvoiceLockStatus::UNCERTAIN === $lock_store->status($concurrent_order->get_id()), 'Manual resolution must not release an uncertain lease while the original SCI worker still owns the connection-bound mutex.');
     $lifecycle->resolve_uncertain_as_failed($concurrent_order, 1);
     $resolved_remote = $lock_store->acquire($concurrent_order->get_id());
     paykassa_smoke_assert($resolved_remote->acquired(), 'Only explicit merchant resolution may release an abandoned remote create for retry.');
@@ -376,7 +389,15 @@ try {
     $preparing_first = $lock_store->acquire($preparing_order->get_id());
     $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}paykassa_invoice_locks SET lease_expires_at = '2000-01-01 00:00:00' WHERE order_id = %d", $preparing_order->get_id()));
     $preparing_reclaimed = $lock_store->acquire($preparing_order->get_id());
-    paykassa_smoke_assert($preparing_first->acquired() && $preparing_reclaimed->acquired() && ! $lock_store->fail($preparing_order->get_id(), $preparing_first->owner_token) && $lock_store->fail($preparing_order->get_id(), $preparing_reclaimed->owner_token), 'Only a pre-provider preparing lease may be reclaimed, and the new owner token must fence the stale worker.');
+    paykassa_smoke_assert(
+        $preparing_first->acquired()
+        && $preparing_reclaimed->acquired()
+        && ! $lock_store->begin_creation($preparing_order->get_id(), $preparing_first->owner_token)
+        && $lock_store->begin_creation($preparing_order->get_id(), $preparing_reclaimed->owner_token)
+        && ! $lock_store->fail($preparing_order->get_id(), $preparing_first->owner_token)
+        && $lock_store->fail($preparing_order->get_id(), $preparing_reclaimed->owner_token),
+        'After a preparing lease is reclaimed, the stale owner must fail the final pre-SCI CAS and only the new owner may cross the remote-create boundary.'
+    );
 
     WP_CLI::success('PayKassa smoke: invoice lifecycle/retry fencing, idempotency, matching IPN, duplicate IPN, merchant/hash/amount mismatch, and late payment passed; HPOS=' . (OrderUtil::custom_orders_table_usage_is_enabled() ? 'on' : 'off') . '.');
 } finally {

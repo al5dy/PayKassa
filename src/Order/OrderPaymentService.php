@@ -6,6 +6,7 @@ namespace Al5dy\PayKassaWoo\Order;
 
 use Al5dy\PayKassaWoo\Gateway\GatewayAvailability;
 use Al5dy\PayKassaWoo\Gateway\RedirectUrlValidator;
+use Al5dy\PayKassaWoo\Infrastructure\DatabaseMutex;
 use Al5dy\PayKassaWoo\PayKassa\CurrencyRateClient;
 use Al5dy\PayKassaWoo\PayKassa\Exception\InvalidResponseException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
@@ -18,6 +19,23 @@ final class OrderPaymentService
 {
     /** @param array<string, mixed> $settings */
     public function create_or_reuse(\WC_Order $order, array $settings, string $direction_key): string
+    {
+        $mutex = new DatabaseMutex();
+        if (! $mutex->acquire(InvoiceLockStore::creation_mutex_resource($order->get_id()))) {
+            throw new PayKassaException('A payment request for this order is already being prepared or created. Please wait and retry.');
+        }
+        try {
+            // Read all reusable-invoice and lease state only after acquiring the
+            // connection-bound fence. A live slow worker cannot lose this fence
+            // merely because the durable diagnostic lease reached its TTL.
+            return $this->create_or_reuse_guarded($this->reload($order->get_id()), $settings, $direction_key, $mutex);
+        } finally {
+            $mutex->release();
+        }
+    }
+
+    /** @param array<string, mixed> $settings */
+    private function create_or_reuse_guarded(\WC_Order $order, array $settings, string $direction_key, DatabaseMutex $mutex): string
     {
         $locks = new InvoiceLockStore();
         $reused = $this->reuse_active_invoice($order, $locks);
@@ -96,10 +114,19 @@ final class OrderPaymentService
             throw new PayKassaException('The PayKassa invoice attempt could not be persisted safely.', 0, $exception);
         }
 
-        if (! $locks->begin_creation($order->get_id(), $reservation->owner_token)) {
+        try {
+            $mutex->assert_owned();
+            if (! $locks->begin_creation($order->get_id(), $reservation->owner_token)) {
+                throw new PayKassaException('The PayKassa invoice reservation changed before provider creation. Please retry.');
+            }
+            // This is the final local operation before the money-changing
+            // remote side effect. It catches a lost DB connection/mutex after
+            // the durable owner-token CAS and before SCI is contacted.
+            $mutex->assert_owned();
+        } catch (\Throwable $exception) {
             $locks->fail($order->get_id(), $reservation->owner_token);
             $this->record_attempt_outcome($order->get_id(), PaymentState::INVOICE_FAILED, InvoiceLockStatus::FAILED);
-            throw new PayKassaException('The PayKassa invoice reservation changed before provider creation. Please retry.');
+            throw $exception;
         }
 
         try {
