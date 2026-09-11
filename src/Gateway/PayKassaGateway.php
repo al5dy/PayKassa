@@ -6,6 +6,7 @@ namespace Al5dy\PayKassaWoo\Gateway;
 
 use Al5dy\PayKassaWoo\Order\OrderPaymentService;
 use Al5dy\PayKassaWoo\PayKassa\PaymentSystemRegistry;
+use Al5dy\PayKassaWoo\PayKassa\SciCredentialStore;
 use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 
 final class PayKassaGateway extends \WC_Payment_Gateway
@@ -56,6 +57,15 @@ final class PayKassaGateway extends \WC_Payment_Gateway
     public function process_admin_options(): bool
     {
         $stored = get_option($this->get_option_key(), array());
+        if (is_array($stored) && '' !== (string) ($stored['shop_id'] ?? '') && '' !== (string) ($stored['shop_password'] ?? '')) {
+            try {
+                // Retain the old profile before WooCommerce overwrites it.
+                ( new SciCredentialStore() )->retain($stored, true);
+            } catch (PayKassaException $exception) {
+                \WC_Admin_Settings::add_error(__('PayKassa settings were not changed because the existing SCI credentials could not be retained for unfinished orders.', 'paykassa'));
+                return false;
+            }
+        }
         foreach (array( 'shop_password', 'api_password' ) as $key) {
             $field = $this->plugin_id . $this->id . '_' . $key;
             if (isset($_POST[ $field ]) && '' === (string) wp_unslash($_POST[ $field ]) && is_array($stored) && isset($stored[ $key ])) {
@@ -72,8 +82,24 @@ final class PayKassaGateway extends \WC_Payment_Gateway
             $submitted = array_map('strval', wp_unslash($_POST[$directions_field]));
             $_POST[$directions_field] = array_values(array_intersect(array_keys((new PaymentSystemRegistry())->directions()), $submitted));
         }
-        $saved = parent::process_admin_options();
+        try {
+            $saved = parent::process_admin_options();
+        } catch (PayKassaException $exception) {
+            \WC_Admin_Settings::add_error(__('PayKassa settings were not changed because the previous SCI credential profile could not be retained.', 'paykassa'));
+            return false;
+        }
         $this->settings_data = $this->settings;
+        if ($saved) {
+            $current = get_option($this->get_option_key(), array());
+            if (is_array($current) && '' !== (string) ($current['shop_id'] ?? '') && '' !== (string) ($current['shop_password'] ?? '')) {
+                try {
+                    ( new SciCredentialStore() )->retain($current);
+                } catch (PayKassaException $exception) {
+                    \WC_Admin_Settings::add_error(__('The new PayKassa SCI credentials were saved, but cannot be used to create invoices until their verification profile can be retained.', 'paykassa'));
+                    return false;
+                }
+            }
+        }
         return $saved;
     }
 

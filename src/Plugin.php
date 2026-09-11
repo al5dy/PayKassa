@@ -11,6 +11,7 @@ use Al5dy\PayKassaWoo\Blocks\PayKassaPaymentMethod;
 use Al5dy\PayKassaWoo\Gateway\PayKassaGateway;
 use Al5dy\PayKassaWoo\Infrastructure\Installer;
 use Al5dy\PayKassaWoo\Reconciliation\ReconciliationScheduler;
+use Al5dy\PayKassaWoo\PayKassa\SciCredentialStore;
 use Al5dy\PayKassaWoo\Webhook\WebhookController;
 
 final class Plugin
@@ -31,11 +32,19 @@ final class Plugin
             }
         }
         Installer::migrate_gateway_settings();
+        ( new SciCredentialStore() )->register_rotation_guard();
         $settings_problem = Installer::settings_configuration_problem();
         if (null !== $settings_problem) {
             add_action('admin_notices', static function () use ($settings_problem): void {
                 if (current_user_can('manage_woocommerce')) {
                     echo '<div class="notice notice-warning"><p>' . esc_html($settings_problem) . '</p></div>';
+                }
+            });
+        }
+        if (false !== get_option(Installer::CREDENTIAL_RETENTION_ERROR, false)) {
+            add_action('admin_notices', static function (): void {
+                if (current_user_can('manage_woocommerce')) {
+                    echo '<div class="notice notice-error"><p>' . esc_html__('PayKassa cannot safely retain SCI credentials for unfinished orders. New invoices are blocked until credential-profile storage is available.', 'paykassa') . '</p></div>';
                 }
             });
         }

@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Al5dy\PayKassaWoo\Infrastructure;
 
 use Al5dy\PayKassaWoo\PayKassa\CurrencyRegistry;
+use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 use Al5dy\PayKassaWoo\PayKassa\PaymentSystemRegistry;
+use Al5dy\PayKassaWoo\PayKassa\SciCredentialStore;
 
 final class Installer
 {
     // Version 3 adds owner_token to both event and invoice reservations.
     public const SCHEMA_VERSION = '3';
     public const OPTION = 'paykassa_schema_version';
+    public const CREDENTIAL_RETENTION_ERROR = 'paykassa_sci_credential_retention_error';
     private const SETTINGS_OPTION = 'woocommerce_paykassa_settings';
 
     public static function activate(): void
@@ -128,6 +131,27 @@ final class Installer
         }
         if ($changed) {
             update_option(self::SETTINGS_OPTION, $settings, false);
+        }
+        if (
+            isset($settings['shop_id'], $settings['shop_password'])
+            && is_string($settings['shop_id'])
+            && is_string($settings['shop_password'])
+            && '' !== $settings['shop_id']
+            && '' !== $settings['shop_password']
+        ) {
+            // Seed both the new secret-specific context and the legacy
+            // shop+environment alias before a future settings rotation.
+            try {
+                ( new SciCredentialStore() )->retain($settings, true);
+                delete_option(self::CREDENTIAL_RETENTION_ERROR);
+            } catch (PayKassaException $exception) {
+                // Invoice creation repeats this check and fails before SCI.
+                // Do not turn a credential-profile storage outage into a
+                // site-wide frontend fatal; expose only a non-secret marker.
+                update_option(self::CREDENTIAL_RETENTION_ERROR, gmdate('c'), false);
+            }
+        } else {
+            delete_option(self::CREDENTIAL_RETENTION_ERROR);
         }
     }
 

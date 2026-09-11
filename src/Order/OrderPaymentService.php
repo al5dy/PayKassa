@@ -14,6 +14,7 @@ use Al5dy\PayKassaWoo\PayKassa\Exception\PaymentCreationException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\ProviderUnavailableException;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\PayKassa\PaymentSystemRegistry;
+use Al5dy\PayKassaWoo\PayKassa\SciCredentialStore;
 
 final class OrderPaymentService
 {
@@ -81,6 +82,9 @@ final class OrderPaymentService
 
         // A failed rate request has not contacted SCI and is safe to retry.
         try {
+            // Persist the exact secret/mode profile before creating an invoice.
+            // A later settings rotation must not make its callback unverifiable.
+            $context = ( new SciCredentialStore() )->retain($settings);
             $quote = ( new CurrencyRateClient() )->quote($order_amount, $order_currency, $direction['currency'], $direction['system']);
             $sci = ( new PayKassaClientFactory() )->sci($settings);
         } catch (PayKassaException $exception) {
@@ -89,8 +93,6 @@ final class OrderPaymentService
         }
 
         $environment = 'yes' === ($settings['testmode'] ?? 'no') ? 'test' : 'live';
-        // Context identifies credentials without retaining a password.
-        $context = hash('sha256', (string) ($settings['shop_id'] ?? '') . "\0" . $environment);
         $attempt = array(
             'status' => InvoiceLockStatus::PREPARING,
             'started_at' => gmdate('c'),

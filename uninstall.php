@@ -13,6 +13,8 @@ if ( ! is_array( $settings ) || 'yes' !== ( $settings['delete_data_on_uninstall'
 }
 
 delete_option( 'woocommerce_paykassa_settings' );
+delete_option( 'paykassa_sci_credential_profiles' );
+delete_option( 'paykassa_sci_credential_retention_error' );
 delete_option( 'paykassa_schema_version' );
 delete_option( 'paykassa_last_reconciliation' );
 delete_option( 'paykassa_last_reconciliation_error' );

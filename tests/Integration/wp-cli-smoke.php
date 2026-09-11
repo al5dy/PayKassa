@@ -12,10 +12,12 @@ use Al5dy\PayKassaWoo\Order\InvoiceReservation;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\PayKassa\Dto\PaymentEvidence;
 use Al5dy\PayKassaWoo\Webhook\WebhookEventStore;
+use Al5dy\PayKassaWoo\Webhook\WebhookCredentialResolver;
 use Al5dy\PayKassaWoo\Webhook\WebhookProcessor;
 use Al5dy\PayKassaWoo\Infrastructure\DatabaseMutex;
 use Al5dy\PayKassaWoo\Infrastructure\Logger;
 use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
+use Al5dy\PayKassaWoo\PayKassa\SciCredentialStore;
 use Automattic\WooCommerce\Utilities\OrderUtil;
 
 function paykassa_smoke_assert(bool $condition, string $message): void
@@ -37,6 +39,7 @@ function paykassa_smoke_order(string $currency = 'BTC', string $total = '1.00000
 }
 
 $original_settings = get_option('woocommerce_paykassa_settings', null);
+$original_credential_profiles = get_option(SciCredentialStore::OPTION, null);
 $original_currency = get_option('woocommerce_currency');
 $orders = array();
 $transactions = array();
@@ -47,6 +50,7 @@ $currencies = array();
 $systems = array();
 $hashes = array();
 $create_behaviors = array();
+$verification_profiles = array();
 
 $settings = array(
     'enabled' => 'yes',
@@ -63,7 +67,7 @@ $settings = array(
 update_option('woocommerce_paykassa_settings', $settings, false);
 update_option('woocommerce_currency', 'BTC', false);
 
-$transport = static function ($preempt, array $args, string $url) use (&$active_order_id, &$create_calls, &$amounts, &$currencies, &$systems, &$hashes, &$create_behaviors) {
+$transport = static function ($preempt, array $args, string $url) use (&$active_order_id, &$create_calls, &$amounts, &$currencies, &$systems, &$hashes, &$create_behaviors, &$verification_profiles) {
     $body = is_array($args['body'] ?? null) ? $args['body'] : array();
     if ('https://currency.paykassa.pro/pairs.php' === $url) {
         $pairs = isset($body['pairs']) && is_array($body['pairs']) ? $body['pairs'] : array();
@@ -76,10 +80,10 @@ $transport = static function ($preempt, array $args, string $url) use (&$active_
         return array('headers' => array(), 'body' => wp_json_encode($payload), 'response' => array('code' => 200, 'message' => 'OK'), 'cookies' => array(), 'filename' => null);
     }
     $function = $body['func'] ?? '';
-    if ('1' !== ( $body['test'] ?? '' )) {
-        throw new RuntimeException('PayKassa SCI sandbox requests must send test=1.');
-    }
     if ('sci_create_order' === $function) {
+        if ('1' !== ($body['test'] ?? '') || 'test-secret' !== ($body['sci_key'] ?? '')) {
+            throw new RuntimeException('PayKassa SCI sandbox create requests must use the configured test credential profile.');
+        }
         ++$create_calls;
         $request_order_id = (int) $body['order_id'];
         $amounts[$request_order_id] = (string) $body['amount'];
@@ -97,6 +101,11 @@ $transport = static function ($preempt, array $args, string $url) use (&$active_
         $hashes[$request_order_id] = $hash;
         $payload = array('error' => false, 'message' => 'OK', 'data' => array('url' => 'https://paykassa.app/pay/smoke?hash=' . $hash, 'params' => array('hash' => $hash)));
     } elseif ('sci_confirm_order' === $function) {
+        $verification_profiles[] = array('shop_id' => $body['sci_id'] ?? '', 'shop_password' => $body['sci_key'] ?? '', 'test' => $body['test'] ?? '');
+        if ('test-merchant' !== ($body['sci_id'] ?? '') || 'test-secret' !== ($body['sci_key'] ?? '') || '1' !== ($body['test'] ?? '')) {
+            $payload = array('error' => true, 'message' => 'Wrong SCI credential profile.', 'data' => array());
+            return array('headers' => array(), 'body' => wp_json_encode($payload), 'response' => array('code' => 200, 'message' => 'OK'), 'cookies' => array(), 'filename' => null);
+        }
         $payload = array('error' => false, 'message' => 'OK', 'data' => array(
             'order_id' => (string) $active_order_id,
             'transaction' => 'transaction-' . $active_order_id,
@@ -145,6 +154,7 @@ try {
     $legacy_order = paykassa_smoke_order();
     $orders[] = $legacy_order->get_id();
     $legacy_hash = hash('sha256', 'legacy-active-link-' . $legacy_order->get_id());
+    $hashes[$legacy_order->get_id()] = $legacy_hash;
     $legacy_context = hash('sha256', "test-merchant\0test");
     $legacy_snapshot = new PaymentSnapshot($legacy_order->get_id(), '1.00000000', 'BTC', 'BitCoin', 'BTC', $legacy_hash, '2026-09-10T00:00:00+00:00', true, 'hosted', $legacy_context, '', 'test-merchant');
     $legacy_json = (string) wp_json_encode($legacy_snapshot->to_array());
@@ -180,6 +190,50 @@ try {
     $duplicate = $processor->process($evidence);
     $notes_after_duplicate = count(wc_get_order_notes(array('order_id' => $order->get_id())));
     paykassa_smoke_assert($duplicate['accepted'] && $notes_before_duplicate === $notes_after_duplicate, 'Duplicate webhook must be acknowledged without a second order note or settlement.');
+
+    $rotated_order = paykassa_smoke_order();
+    $orders[] = $rotated_order->get_id();
+    $_POST['paykassa_system'] = 'bitcoin';
+    paykassa_smoke_assert('success' === $gateway->process_payment($rotated_order->get_id())['result'], 'Credential-rotation fixture invoice must be created with the original Test Mode profile.');
+    $rotated_order = wc_get_order($rotated_order->get_id());
+    $rotated_snapshot = PaymentSnapshot::from_json((string) $rotated_order->get_meta(OrderMeta::SNAPSHOT, true));
+    paykassa_smoke_assert(
+        $rotated_snapshot instanceof PaymentSnapshot
+        && SciCredentialStore::context('test-merchant', 'test-secret', true) === $rotated_snapshot->merchant_context,
+        'A new snapshot must reference the exact secret-specific SCI credential profile.'
+    );
+    paykassa_smoke_assert(! str_contains((string) $rotated_order->get_meta(OrderMeta::SNAPSHOT, true), 'test-secret'), 'The immutable order snapshot must never contain the retained SCI secret.');
+    update_option('woocommerce_paykassa_settings', array_replace($settings, array('shop_password' => 'rotated-live-secret', 'testmode' => 'no')), false);
+    $active_order_id = $rotated_order->get_id();
+    $profiles_before_rotation_callback = count($verification_profiles);
+    $rotated_evidence = (new WebhookCredentialResolver())->verify('valid-private-hash-after-credential-rotation', $rotated_order->get_id());
+    $transactions[] = $rotated_evidence->transaction_id;
+    paykassa_smoke_assert(
+        $profiles_before_rotation_callback + 1 === count($verification_profiles)
+        && 'test-secret' === $verification_profiles[array_key_last($verification_profiles)]['shop_password']
+        && '1' === $verification_profiles[array_key_last($verification_profiles)]['test']
+        && 'test' === $rotated_evidence->environment,
+        'A callback for an unfinished Test Mode invoice must use its retained old secret/mode after current settings switch to a new Live profile.'
+    );
+    paykassa_smoke_assert($processor->process($rotated_evidence)['accepted'], 'Provider evidence verified with the retained invoice credential profile must settle normally.');
+    $rotated_order = wc_get_order($rotated_order->get_id());
+    paykassa_smoke_assert($rotated_order instanceof WC_Order && $rotated_order->is_paid(), 'Credential rotation must not strand the unfinished old invoice.');
+
+    $routing_mismatch_rejected = false;
+    try {
+        (new WebhookCredentialResolver())->verify('valid-private-hash-with-forged-routing-order', $legacy_order->get_id());
+    } catch (PayKassaException $exception) {
+        $routing_mismatch_rejected = true;
+    }
+    paykassa_smoke_assert($routing_mismatch_rejected, 'A raw callback order ID must be rejected when provider verification returns a different technical order ID.');
+
+    $active_order_id = $legacy_order->get_id();
+    $legacy_rotated_evidence = (new WebhookCredentialResolver())->verify('valid-private-hash-for-legacy-snapshot-after-rotation', $legacy_order->get_id());
+    $transactions[] = $legacy_rotated_evidence->transaction_id;
+    paykassa_smoke_assert('test' === $legacy_rotated_evidence->environment && $processor->process($legacy_rotated_evidence)['accepted'], 'A pre-versioning snapshot must resolve through the once-seeded legacy credential alias after settings rotation.');
+    $legacy_order = wc_get_order($legacy_order->get_id());
+    paykassa_smoke_assert($legacy_order instanceof WC_Order && $legacy_order->is_paid(), 'Credential rotation must not strand a legacy active invoice.');
+    update_option('woocommerce_paykassa_settings', $settings, false);
 
     $fiat_settings = array_replace($settings, array(
         'accepted_order_currencies' => array('USD', 'EUR', 'USDT'),
@@ -423,6 +477,11 @@ try {
         delete_option('woocommerce_paykassa_settings');
     } else {
         update_option('woocommerce_paykassa_settings', $original_settings, false);
+    }
+    if (null === $original_credential_profiles) {
+        delete_option(SciCredentialStore::OPTION);
+    } else {
+        update_option(SciCredentialStore::OPTION, $original_credential_profiles, false);
     }
     update_option('woocommerce_currency', $original_currency, false);
 }

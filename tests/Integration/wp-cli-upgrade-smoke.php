@@ -2,6 +2,7 @@
 
 use Al5dy\PayKassaWoo\Infrastructure\Installer;
 use Al5dy\PayKassaWoo\Gateway\PayKassaGateway;
+use Al5dy\PayKassaWoo\PayKassa\SciCredentialStore;
 
 function paykassa_upgrade_assert(bool $condition, string $message): void
 {
@@ -14,6 +15,7 @@ $had_settings = false !== get_option('woocommerce_paykassa_settings', false);
 $original_settings = get_option('woocommerce_paykassa_settings', false);
 $original_schema = get_option(Installer::OPTION, false);
 $original_currency = get_option('woocommerce_currency', false);
+$original_credential_profiles = get_option(SciCredentialStore::OPTION, false);
 $legacy = require __DIR__ . '/../fixtures/legacy-settings.php';
 
 try {
@@ -33,6 +35,9 @@ try {
     }
     paykassa_upgrade_assert(array('USD') === ($migrated['accepted_order_currencies'] ?? null), 'USD store currency must migrate to the explicit accepted order currency list.');
     paykassa_upgrade_assert(array('tron_trc20:USDT') === ($migrated['enabled_payment_directions'] ?? null), 'Legacy enabled_systems must migrate to explicit payment directions.');
+    $legacy_credential_context = SciCredentialStore::legacy_context((string) $legacy['shop_id'], 'yes' === ($legacy['testmode'] ?? 'no'));
+    $legacy_credential_profile = (new SciCredentialStore())->settings_for_context($legacy_credential_context);
+    paykassa_upgrade_assert(is_array($legacy_credential_profile) && $legacy['shop_password'] === $legacy_credential_profile['shop_password'], 'Upgrade must retain the current SCI secret under the legacy snapshot context before any future credential rotation.');
     paykassa_upgrade_assert((new PayKassaGateway())->is_available(), 'A correctly configured upgraded USD store must retain PayKassa gateway availability.');
     paykassa_upgrade_assert(Installer::SCHEMA_VERSION === get_option(Installer::OPTION), 'Schema version must be updated.');
     global $wpdb;
@@ -99,5 +104,10 @@ try {
         delete_option('woocommerce_currency');
     } else {
         update_option('woocommerce_currency', $original_currency, false);
+    }
+    if (false === $original_credential_profiles) {
+        delete_option(SciCredentialStore::OPTION);
+    } else {
+        update_option(SciCredentialStore::OPTION, $original_credential_profiles, false);
     }
 }

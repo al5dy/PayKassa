@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Al5dy\PayKassaWoo\Webhook;
 
 use Al5dy\PayKassaWoo\Infrastructure\Logger;
-use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\ProviderUnavailableException;
 
@@ -30,14 +29,23 @@ final class WebhookController
             status_header(400);
             exit;
         }
+        $routing_order_raw = isset($payload['order_id']) && is_string($payload['order_id']) ? $payload['order_id'] : '';
+        $routing_order_id = preg_match('/^[1-9][0-9]{0,18}$/', $routing_order_raw)
+            ? filter_var($routing_order_raw, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)))
+            : false;
+        if (false === $routing_order_id) {
+            status_header(400);
+            exit;
+        }
         if (! $this->within_rate_limit()) {
             status_header(429);
             header('Retry-After: 60');
             exit;
         }
-        $settings = get_option('woocommerce_paykassa_settings', array());
         try {
-            $evidence = ( new PayKassaClientFactory() )->sci(is_array($settings) ? $settings : array())->verify_ipn($hash);
+            // Raw order_id selects only an immutable credential context. It is
+            // not payment evidence and must match the provider-verified ID.
+            $evidence = ( new WebhookCredentialResolver() )->verify($hash, (int) $routing_order_id);
             $result = ( new WebhookProcessor(new WebhookEventStore(), new Logger()) )->process($evidence);
             if ($result['accepted']) {
                 header('Content-Type: text/plain; charset=utf-8');

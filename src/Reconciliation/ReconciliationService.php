@@ -15,6 +15,7 @@ use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\WebhookVerificationException;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\Webhook\WebhookEventStore;
+use Al5dy\PayKassaWoo\Webhook\WebhookCredentialResolver;
 use Al5dy\PayKassaWoo\Webhook\WebhookProcessor;
 
 /**
@@ -100,6 +101,7 @@ final class ReconciliationService
         }
         $factory = new PayKassaClientFactory();
         $api = $factory->api($settings);
+        $credential_resolver = new WebhookCredentialResolver();
         $processor = new WebhookProcessor(new WebhookEventStore(), new Logger());
         $deadline = time() + 40;
         $checked = 0;
@@ -122,7 +124,7 @@ final class ReconciliationService
                         return $this->report($job, 'in_progress');
                     }
                     $mutex->assert_owned();
-                    $outcome = $this->recover($page->candidates[$index], $settings, $factory, $processor);
+                    $outcome = $this->recover($page->candidates[$index], $settings, $credential_resolver, $processor);
                     if ('retry' === $outcome) {
                         throw new PayKassaException('Settlement did not finish durably; recovery will retry.');
                     }
@@ -167,7 +169,7 @@ final class ReconciliationService
     }
 
     /** @param array<string, string> $settings */
-    private function recover(HistoryCandidate $candidate, array $settings, PayKassaClientFactory $factory, WebhookProcessor $processor): string
+    private function recover(HistoryCandidate $candidate, array $settings, WebhookCredentialResolver $credential_resolver, WebhookProcessor $processor): string
     {
         if (! $candidate->can_verify()) {
             return 'unverifiable';
@@ -180,9 +182,8 @@ final class ReconciliationService
         if (! $snapshot instanceof PaymentSnapshot || $snapshot->order_id !== $candidate->order_id || $snapshot->merchant_shop_id !== $settings['shop_id']) {
             return 'unverifiable';
         }
-        $settings['testmode'] = $snapshot->test_mode ? 'yes' : 'no';
         try {
-            $evidence = $factory->sci($settings)->verify_ipn($candidate->verification_token());
+            $evidence = $credential_resolver->verify($candidate->verification_token(), $candidate->order_id);
         } catch (WebhookVerificationException $exception) {
             (new Logger())->log('warning', 'reconciliation_unverifiable', array('order_id' => $candidate->order_id, 'error_code' => Logger::fingerprint($exception->getMessage())));
             return 'unverifiable';
