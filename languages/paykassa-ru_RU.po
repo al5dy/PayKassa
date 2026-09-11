@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PayKassa\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/paykassa\n"
-"POT-Creation-Date: 2026-09-11T20:20:22+02:00\n"
+"POT-Creation-Date: 2026-09-11T20:49:42+02:00\n"
 "PO-Revision-Date: 2018-03-29 00:20+0300\n"
 "Last-Translator: Anton Lokotkov (ziscod) <fakeemail@fakeemail.com>\n"
 "Language-Team: Ziscod\n"
@@ -66,39 +66,47 @@ msgid "Live"
 msgstr ""
 
 #: src/Admin/DiagnosticsPage.php:71
-msgid "Public PayKassa base URL"
-msgstr ""
+msgid "Public PayKassa callback base URL"
+msgstr "Публичный базовый URL обратных вызовов PayKassa"
 
 #: src/Admin/DiagnosticsPage.php:72
-msgid "Public URL source"
-msgstr ""
+msgid "Callback URL source"
+msgstr "Источник URL обратных вызовов"
 
 #: src/Admin/DiagnosticsPage.php:72
 msgid "External override"
-msgstr ""
+msgstr "Внешнее переопределение"
 
-#: src/Admin/DiagnosticsPage.php:72
+#: src/Admin/DiagnosticsPage.php:72 src/Admin/DiagnosticsPage.php:74
 msgid "WordPress home URL"
-msgstr ""
+msgstr "Домашний URL WordPress"
 
-#: src/Admin/DiagnosticsPage.php:73 src/Admin/DiagnosticsPage.php:74
-#: src/Admin/DiagnosticsPage.php:75
+#: src/Admin/DiagnosticsPage.php:73
+msgid "Browser return base URL"
+msgstr "Базовый URL возврата браузера"
+
+#: src/Admin/DiagnosticsPage.php:74
+msgid "Browser return URL source"
+msgstr "Источник URL возврата браузера"
+
+#: src/Admin/DiagnosticsPage.php:75 src/Admin/DiagnosticsPage.php:76
+#: src/Admin/DiagnosticsPage.php:77
 msgid "Never"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:74
+#: src/Admin/DiagnosticsPage.php:76
 msgid "Last completed history scan"
 msgstr "Последняя завершённая проверка истории"
 
-#: src/Admin/DiagnosticsPage.php:75
+#: src/Admin/DiagnosticsPage.php:77
 msgid "Last recovery error"
 msgstr "Последняя ошибка восстановления платежей"
 
-#: src/Admin/DiagnosticsPage.php:76
+#: src/Admin/DiagnosticsPage.php:78
 msgid "History recovery capability"
 msgstr "Возможность восстановления по истории"
 
-#: src/Admin/DiagnosticsPage.php:77
+#: src/Admin/DiagnosticsPage.php:79
 msgid ""
 "Unsupported in PayKassa Test Mode: history returned no authoritative "
 "incoming-payment records during real sandbox validation."
@@ -106,7 +114,7 @@ msgstr ""
 "Не поддерживается в тестовом режиме PayKassa: при реальной проверке "
 "песочницы история не вернула достоверных записей о входящих платежах."
 
-#: src/Admin/DiagnosticsPage.php:78
+#: src/Admin/DiagnosticsPage.php:80
 msgid ""
 "Unverified for unattended use until a controlled live lost-webhook payment "
 "proves that history provides authoritative matching fields."
@@ -115,45 +123,57 @@ msgstr ""
 "LIVE-платёж с потерянным webhook не подтвердит, что история содержит "
 "достоверные поля для сопоставления."
 
-#: src/Admin/DiagnosticsPage.php:82
+#: src/Admin/DiagnosticsPage.php:84
 msgid "Recovery status"
 msgstr "Состояние восстановления платежей"
 
-#: src/Admin/DiagnosticsPage.php:82
+#: src/Admin/DiagnosticsPage.php:84
 msgid "History records checked"
 msgstr "Проверено записей истории"
 
-#: src/Admin/DiagnosticsPage.php:82
+#: src/Admin/DiagnosticsPage.php:84
 msgid "Payments recovered"
 msgstr "Восстановлено платежей"
 
-#: src/Admin/DiagnosticsPage.php:82
+#: src/Admin/DiagnosticsPage.php:84
 msgid "Duplicate payments ignored"
 msgstr "Повторных событий без повторного зачисления"
 
-#: src/Admin/DiagnosticsPage.php:82
+#: src/Admin/DiagnosticsPage.php:84
 msgid "Payments requiring manual review"
 msgstr "Платежей, требующих ручной проверки"
 
-#: src/Admin/DiagnosticsPage.php:82
+#: src/Admin/DiagnosticsPage.php:84
 msgid "History records without sufficient verification"
 msgstr "Записей истории без достаточных данных для проверки"
 
-#: src/Admin/DiagnosticsPage.php:89
+#: src/Admin/DiagnosticsPage.php:91
 msgid "PayKassa payment health"
 msgstr "Диагностика платежей PayKassa"
 
-#: src/Admin/DiagnosticsPage.php:91
-msgid ""
-"The stored External PayKassa base URL is invalid. Merchant URLs below use "
-"the WordPress home URL until the setting is corrected."
-msgstr ""
-
 #: src/Admin/DiagnosticsPage.php:93
-msgid "Critical: Live PayKassa notification URLs must use HTTPS."
+msgid ""
+"The stored External PayKassa base URL is invalid. Server callback URLs below "
+"use the WordPress home URL until the setting is corrected. Browser returns "
+"are unaffected."
 msgstr ""
+"Сохранённый внешний базовый URL PayKassa недействителен. До исправления "
+"настройки URL серверных обратных вызовов ниже используют домашний URL "
+"WordPress. URL возврата браузера не затронуты."
 
 #: src/Admin/DiagnosticsPage.php:95
+msgid "Critical: Live PayKassa notification URLs must use HTTPS."
+msgstr "Критическая ошибка: URL уведомлений PayKassa в рабочем режиме должны использовать HTTPS."
+
+#: src/Admin/DiagnosticsPage.php:98
+msgid ""
+"Critical: the canonical WordPress home URL must use HTTPS for secure "
+"PayKassa browser returns."
+msgstr ""
+"Критическая ошибка: канонический домашний URL WordPress должен использовать "
+"HTTPS для безопасного возврата браузера из PayKassa."
+
+#: src/Admin/DiagnosticsPage.php:100
 msgid ""
 "Payment recovery is experimental and disabled by default. History records "
 "and invoice TXIDs are never sufficient payment evidence; settlement still "
@@ -164,33 +184,33 @@ msgstr ""
 "оплаты; для зачисления по-прежнему требуются проверенные через SCI "
 "неизменяемые данные платежа."
 
-#: src/Admin/DiagnosticsPage.php:99
+#: src/Admin/DiagnosticsPage.php:104
 msgid "Connected: PayKassa API credentials were accepted."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:99
+#: src/Admin/DiagnosticsPage.php:104
 msgid "Connection failed. Check API credentials or PayKassa availability."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:99
+#: src/Admin/DiagnosticsPage.php:104
 msgid ""
 "Add API credentials to run the read-only connection test. SCI credentials "
 "have no documented read-only test."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:108
+#: src/Admin/DiagnosticsPage.php:113
 msgid "Endpoint diagnostics"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:110
+#: src/Admin/DiagnosticsPage.php:115
 msgid "Registered"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:110
+#: src/Admin/DiagnosticsPage.php:115
 msgid "Not registered"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:112
+#: src/Admin/DiagnosticsPage.php:117
 msgid ""
 "PayKassa notification servers must be able to reach both public POST "
 "endpoints. Source IP is diagnostic only; authenticity always comes from "
@@ -198,81 +218,88 @@ msgid ""
 "405 on either server callback is expected."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:115
+#: src/Admin/DiagnosticsPage.php:120
 msgid "Test API connection"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:122
+#: src/Admin/DiagnosticsPage.php:127
 msgid "URL of Invoice Payment Notifications"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:124
+#: src/Admin/DiagnosticsPage.php:129
 msgid ""
 "Required. Server-to-server payment verification using sci_confirm_order."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:126
+#: src/Admin/DiagnosticsPage.php:131
 msgid "URL of successful payment"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:128
+#: src/Admin/DiagnosticsPage.php:133
 msgid "Browser redirect only. Never used as payment evidence."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:130
+#: src/Admin/DiagnosticsPage.php:135
 msgid "URL malfunction when paying"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:132
+#: src/Admin/DiagnosticsPage.php:137
 msgid "Browser redirect only. Does not cancel or settle an order."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:134
+#: src/Admin/DiagnosticsPage.php:139
 msgid "URL of Cryptocurrency Transaction Processor"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:136
+#: src/Admin/DiagnosticsPage.php:141
 msgid ""
 "Optional secondary verified transaction notification channel using "
 "sci_confirm_transaction_notification. Live only."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:139
+#: src/Admin/DiagnosticsPage.php:144
 #, fuzzy
 msgid "PayKassa Merchant URLs"
 msgstr "Песочница"
 
-#: src/Admin/DiagnosticsPage.php:140
+#: src/Admin/DiagnosticsPage.php:145
 msgid ""
-"Copy each URL into the matching field in PayKassa Merchant settings. The "
-"plugin does not access or modify your PayKassa account."
+"Copy each URL into the matching field in PayKassa Merchant settings. "
+"External override applies only to the two server callbacks; browser returns "
+"stay on the WordPress home origin so login and WooCommerce session cookies "
+"remain available. The plugin does not access or modify your PayKassa account."
 msgstr ""
+"Скопируйте каждый URL в соответствующее поле настроек магазина PayKassa. "
+"Внешнее переопределение применяется только к двум серверным обратным вызовам; "
+"возвраты браузера остаются на домашнем домене WordPress, чтобы cookies входа "
+"и сессии WooCommerce оставались доступными. Плагин не получает доступ к "
+"вашему аккаунту PayKassa и не изменяет его."
 
-#: src/Admin/DiagnosticsPage.php:148
+#: src/Admin/DiagnosticsPage.php:153
 msgid "Copy"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:151
+#: src/Admin/DiagnosticsPage.php:156
 msgid "URL copied."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:151
+#: src/Admin/DiagnosticsPage.php:156
 msgid "Select and copy the URL manually."
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:158
+#: src/Admin/DiagnosticsPage.php:163
 msgid "Invoice notification endpoint (POST)"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:159
+#: src/Admin/DiagnosticsPage.php:164
 msgid "Successful payment endpoint (GET)"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:160
+#: src/Admin/DiagnosticsPage.php:165
 msgid "Malfunction endpoint (GET)"
 msgstr ""
 
-#: src/Admin/DiagnosticsPage.php:161
+#: src/Admin/DiagnosticsPage.php:166
 msgid "Transaction processor endpoint (POST, Live only)"
 msgstr ""
 
@@ -398,19 +425,24 @@ msgstr ""
 
 #: src/Admin/SiteHealth.php:32
 msgid "PayKassa public URL override is invalid"
-msgstr ""
+msgstr "Публичный URL PayKassa переопределён недействительным значением"
 
 #: src/Admin/SiteHealth.php:32
 msgid "Correct the External PayKassa base URL before copying Merchant URLs."
-msgstr ""
+msgstr "Исправьте внешний базовый URL PayKassa перед копированием URL магазина."
 
 #: src/Admin/SiteHealth.php:35
 msgid "PayKassa needs HTTPS in live mode"
 msgstr ""
 
 #: src/Admin/SiteHealth.php:35
-msgid "Enable HTTPS before accepting live cryptocurrency payments."
+msgid ""
+"Enable HTTPS for both the public PayKassa callbacks and the canonical "
+"WordPress home URL before accepting live cryptocurrency payments."
 msgstr ""
+"Перед приёмом рабочих криптовалютных платежей включите HTTPS как для "
+"публичных обратных вызовов PayKassa, так и для канонического домашнего URL "
+"WordPress."
 
 #: src/Admin/SiteHealth.php:37
 #, fuzzy
@@ -500,14 +532,20 @@ msgid "Use PayKassa test mode"
 msgstr "Включить оплату по PayKassa"
 
 #: src/Gateway/PayKassaGateway.php:47
-msgid "External PayKassa base URL (optional)"
-msgstr ""
+msgid "External PayKassa callback base URL (optional)"
+msgstr "Внешний базовый URL обратных вызовов PayKassa (необязательно)"
 
 #: src/Gateway/PayKassaGateway.php:47
 msgid ""
-"Used only to generate the four URLs copied into PayKassa Merchant settings. "
-"Leave blank to use the WordPress home URL. HTTPS is required in Live mode."
+"Used only for the Invoice Payment Notification and Cryptocurrency "
+"Transaction Processor URLs. Successful payment and malfunction browser "
+"returns always use the WordPress home URL to preserve login and WooCommerce "
+"session cookies. HTTPS is required in Live mode."
 msgstr ""
+"Используется только для URL уведомления об оплате счёта и обработчика "
+"криптовалютных транзакций. Возвраты браузера после успешной оплаты и ошибки "
+"всегда используют домашний URL WordPress, чтобы сохранить cookies входа и "
+"сессии WooCommerce. В рабочем режиме требуется HTTPS."
 
 #: src/Gateway/PayKassaGateway.php:48
 msgid "Accepted WooCommerce currencies"

@@ -9,6 +9,17 @@ if (! defined('PAYKASSA_TEST_DATABASE') || true !== PAYKASSA_TEST_DATABASE || ! 
 }
 
 add_action('init', static function (): void {
+    if ('GET' === strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) && '1' === ($_GET['paykassa_browser_merchant_urls'] ?? null)) {
+        $settings = get_option('woocommerce_paykassa_settings', array());
+        $settings = is_array($settings) ? $settings : array();
+        $urls = new \Al5dy\PayKassaWoo\Gateway\MerchantEndpointUrls($settings);
+        wp_send_json(array(
+            'invoice_notification_url' => $urls->invoice_notification_url(),
+            'success_return_url' => $urls->success_return_url(),
+            'failure_return_url' => $urls->failure_return_url(),
+            'transaction_notification_url' => $urls->transaction_notification_url(),
+        ));
+    }
     if (
         'POST' !== strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? ''))
         || 'blocks' !== ($_GET['paykassa_browser_checkout'] ?? null)

@@ -219,9 +219,10 @@ try {
     }
     $urls = new MerchantEndpointUrls($live_settings);
     paykassa_endpoint_assert('https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa' === $urls->invoice_notification_url(), 'Invoice Merchant URL must use the external base override.');
-    paykassa_endpoint_assert('https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa_return' === $urls->success_return_url(), 'Success Merchant URL must use the external base override.');
-    paykassa_endpoint_assert('https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa_cancel' === $urls->failure_return_url(), 'Failure Merchant URL must use the external base override.');
+    paykassa_endpoint_assert(home_url('/?wc-api=wc_gateway_paykassa_return') === $urls->success_return_url(), 'Success Merchant URL must preserve the canonical WordPress origin for browser cookies.');
+    paykassa_endpoint_assert(home_url('/?wc-api=wc_gateway_paykassa_cancel') === $urls->failure_return_url(), 'Failure Merchant URL must preserve the canonical WordPress origin for browser cookies.');
     paykassa_endpoint_assert('https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa_transaction' === $urls->transaction_notification_url(), 'Transaction Merchant URL must use the external base override.');
+    paykassa_endpoint_assert(! str_contains($urls->success_return_url(), 'ngrok-free.dev') && ! str_contains($urls->failure_return_url(), 'ngrok-free.dev'), 'External callback override must never change browser return origins.');
     wp_set_current_user(1);
     ob_start();
     (new DiagnosticsPage())->render();
@@ -239,7 +240,9 @@ try {
     } else {
         $_SERVER['HTTPS'] = $original_https;
     }
-    paykassa_endpoint_assert('good' === ($site_health['status'] ?? ''), 'HTTPS external Merchant URLs must pass Site Health in Live mode.');
+    $home_scheme = wp_parse_url(home_url('/'), PHP_URL_SCHEME);
+    $expected_health = 'https' === $home_scheme ? 'good' : 'critical';
+    paykassa_endpoint_assert($expected_health === ($site_health['status'] ?? ''), 'Site Health must require HTTPS for both external callbacks and canonical browser returns in Live mode.');
 
     if (! WC()->session instanceof WC_Session) {
         WC()->session = new WC_Session_Handler();

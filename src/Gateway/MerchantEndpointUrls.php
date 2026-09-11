@@ -11,58 +11,70 @@ final class MerchantEndpointUrls
     public const FAILURE_RETURN = 'wc_gateway_paykassa_cancel';
     public const TRANSACTION_NOTIFICATION = 'wc_gateway_paykassa_transaction';
 
-    private readonly string $base_url;
-    private readonly string $source;
+    private readonly string $server_callback_base_url;
+    private readonly string $browser_return_base_url;
+    private readonly string $server_callback_source;
 
     /** @param array<string, mixed> $settings */
     public function __construct(array $settings = array(), ?string $home_base_url = null)
     {
         $home_base_url ??= home_url('/');
+        $this->browser_return_base_url = self::with_trailing_slash($home_base_url);
         $external = isset($settings['external_base_url']) && is_string($settings['external_base_url'])
             ? trim($settings['external_base_url'])
             : '';
         if ('' !== $external) {
-            $this->base_url = self::normalize_external_base_url($external, 'yes' !== ($settings['testmode'] ?? 'no'));
-            $this->source = 'external_override';
+            $this->server_callback_base_url = self::normalize_external_base_url($external, 'yes' !== ($settings['testmode'] ?? 'no'));
+            $this->server_callback_source = 'external_override';
             return;
         }
-        $this->base_url = self::with_trailing_slash($home_base_url);
-        $this->source = 'wordpress_home';
+        $this->server_callback_base_url = $this->browser_return_base_url;
+        $this->server_callback_source = 'wordpress_home';
     }
 
     public function invoice_notification_url(): string
     {
-        return $this->endpoint(self::INVOICE_NOTIFICATION);
+        return self::endpoint($this->server_callback_base_url, self::INVOICE_NOTIFICATION);
     }
 
     public function success_return_url(): string
     {
-        return $this->endpoint(self::SUCCESS_RETURN);
+        return self::endpoint($this->browser_return_base_url, self::SUCCESS_RETURN);
     }
 
     public function failure_return_url(): string
     {
-        return $this->endpoint(self::FAILURE_RETURN);
+        return self::endpoint($this->browser_return_base_url, self::FAILURE_RETURN);
     }
 
     public function transaction_notification_url(): string
     {
-        return $this->endpoint(self::TRANSACTION_NOTIFICATION);
+        return self::endpoint($this->server_callback_base_url, self::TRANSACTION_NOTIFICATION);
     }
 
-    public function base_url(): string
+    public function server_callback_base_url(): string
     {
-        return $this->base_url;
+        return $this->server_callback_base_url;
     }
 
-    public function source(): string
+    public function browser_return_base_url(): string
     {
-        return $this->source;
+        return $this->browser_return_base_url;
     }
 
-    public function is_https(): bool
+    public function server_callback_source(): string
     {
-        return 'https' === strtolower((string) (parse_url($this->base_url, PHP_URL_SCHEME) ?? ''));
+        return $this->server_callback_source;
+    }
+
+    public function server_callbacks_use_https(): bool
+    {
+        return self::uses_https($this->server_callback_base_url);
+    }
+
+    public function browser_returns_use_https(): bool
+    {
+        return self::uses_https($this->browser_return_base_url);
     }
 
     public static function normalize_external_base_url(string $url, bool $live_mode): string
@@ -93,9 +105,14 @@ final class MerchantEndpointUrls
         return self::with_trailing_slash($url);
     }
 
-    private function endpoint(string $name): string
+    private static function endpoint(string $base_url, string $name): string
     {
-        return $this->base_url . '?wc-api=' . rawurlencode($name);
+        return $base_url . '?wc-api=' . rawurlencode($name);
+    }
+
+    private static function uses_https(string $url): bool
+    {
+        return 'https' === strtolower((string) (parse_url($url, PHP_URL_SCHEME) ?? ''));
     }
 
     private static function with_trailing_slash(string $url): string

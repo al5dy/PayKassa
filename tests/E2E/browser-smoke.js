@@ -19,6 +19,30 @@ async page => {
 			throw new Error( message );
 		}
 	};
+	const merchantUrlResponse = await page.request.get( `${ baseUrl }/?paykassa_browser_merchant_urls=1` );
+	assert( merchantUrlResponse.status() === 200, 'The disposable site must expose its test-only generated Merchant URLs.' );
+	const merchantUrls = await merchantUrlResponse.json();
+	assert(
+		merchantUrls.invoice_notification_url === 'https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa',
+		'External base override must apply to the Invoice Payment Notification URL.'
+	);
+	assert(
+		merchantUrls.transaction_notification_url === 'https://ocelot-dribble-creature.ngrok-free.dev/?wc-api=wc_gateway_paykassa_transaction',
+		'External base override must apply to the Transaction Processor URL.'
+	);
+	assert(
+		merchantUrls.success_return_url === `${ baseUrl }/?wc-api=wc_gateway_paykassa_return`,
+		'Success return must retain the canonical store origin when callback override is cross-origin.'
+	);
+	assert(
+		merchantUrls.failure_return_url === `${ baseUrl }/?wc-api=wc_gateway_paykassa_cancel`,
+		'Failure return must retain the canonical store origin when callback override is cross-origin.'
+	);
+	assert(
+		merchantUrls.invoice_notification_url.startsWith( 'https://ocelot-dribble-creature.ngrok-free.dev/' ) &&
+			merchantUrls.success_return_url.startsWith( `${ baseUrl }/` ),
+		'The browser smoke must exercise distinct callback and browser-return origins.'
+	);
 	const orderIdFromHostedUrl = () => {
 		const match = page.url().match( /^https:\/\/paykassa\.app\/browser-smoke\?[^#]*\border_id=(\d+)/ );
 		assert( !! match, 'Checkout must produce the reviewed PayKassa hosted URL.' );
@@ -66,7 +90,7 @@ async page => {
 		`browser-transaction-confirmed-${ classicOrderId }-0123456789abcdef`,
 		{ currency: 'UNTRUSTED', system: 'UNTRUSTED' }
 	);
-	await page.goto( `${ baseUrl }/?wc-api=wc_gateway_paykassa_return&order_id=${ classicOrderId }`, { waitUntil: 'networkidle' } );
+	await page.goto( `${ merchantUrls.success_return_url }&order_id=${ classicOrderId }`, { waitUntil: 'networkidle' } );
 	assert( page.url().includes( `/order-received/${ classicOrderId }/` ), 'Classic success return must reach the native order-received URL.' );
 	assert( await page.getByRole( 'heading', { name: 'Order received' } ).isVisible(), 'Classic success return must render the WooCommerce thank-you page.' );
 	const checkoutSwitch = await page.request.post( `${ baseUrl }/?paykassa_browser_checkout=blocks`, {
@@ -84,7 +108,7 @@ async page => {
 
 	await postNotification( 'wc_gateway_paykassa_transaction', blocksOrderId, `browser-transaction-confirmed-${ blocksOrderId }-0123456789abcdef` );
 	await postNotification( 'wc_gateway_paykassa', blocksOrderId, `browser-invoice-${ blocksOrderId }-0123456789abcdef` );
-	await page.goto( `${ baseUrl }/?wc-api=wc_gateway_paykassa_return&order_id=${ blocksOrderId }`, { waitUntil: 'networkidle' } );
+	await page.goto( `${ merchantUrls.success_return_url }&order_id=${ blocksOrderId }`, { waitUntil: 'networkidle' } );
 	assert( page.url().includes( `/order-received/${ blocksOrderId }/` ), 'Blocks success return must reach the native order-received URL.' );
 	assert( await page.getByRole( 'heading', { name: 'Order received' } ).isVisible(), 'Blocks success return must render the WooCommerce thank-you page.' );
 
@@ -94,7 +118,7 @@ async page => {
 	await waitForHostedRedirect( page.getByRole( 'button', { name: 'Place Order' } ) );
 	const failedOrderId = orderIdFromHostedUrl();
 	await postNotification( 'wc_gateway_paykassa_transaction', failedOrderId, `browser-transaction-pending-${ failedOrderId }-0123456789abcdef` );
-	await page.goto( `${ baseUrl }/?wc-api=wc_gateway_paykassa_cancel&order_id=${ failedOrderId }`, { waitUntil: 'networkidle' } );
+	await page.goto( `${ merchantUrls.failure_return_url }&order_id=${ failedOrderId }`, { waitUntil: 'networkidle' } );
 	assert( page.url().includes( `/blocks-checkout/order-pay/${ failedOrderId }/` ), 'Failure return must reach the native retry-payment URL.' );
 	assert( await page.getByText( 'The PayKassa payment was not completed.' ).isVisible(), 'Failure return must show a generic retry notice.' );
 	assert( await page.getByRole( 'button', { name: 'Pay for order' } ).isVisible(), 'Failure return must leave the unpaid order retryable.' );
@@ -119,5 +143,6 @@ async page => {
 		failedOrderId,
 		invoiceFirstThenTransaction: true,
 		transactionFirstThenInvoice: true,
+		callbackAndBrowserOriginsSeparated: true,
 	};
 }

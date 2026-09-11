@@ -107,4 +107,4 @@ if [[ -n "$PAYKASSA_FAILED_ORDER_ID" ]]; then
 	PAYKASSA_FAILED_ORDER_ID="$PAYKASSA_FAILED_ORDER_ID" "${wp_cli[@]}" eval '$order = wc_get_order((int) getenv("PAYKASSA_FAILED_ORDER_ID")); if (! $order instanceof WC_Order || $order->is_paid() || "pending" !== $order->get_status()) { throw new RuntimeException("Failure return mutated the unpaid order."); }'
 fi
 
-printf 'PayKassa browser E2E passed: Classic Checkout, Blocks Checkout, exact IPN ACKs, success return, and failure retry.\n'
+printf 'PayKassa browser E2E passed: split callback/browser origins, Classic Checkout, Blocks Checkout, exact IPN ACKs, success return, and failure retry.\n'

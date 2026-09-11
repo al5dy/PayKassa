@@ -28,7 +28,7 @@ The plugin generates one URL for each of PayKassa's four Merchant settings. Copy
 | URL malfunction when paying | `/?wc-api=wc_gateway_paykassa_cancel` | Browser UX return only; never cancels or settles an order |
 | URL of Cryptocurrency Transaction Processor | `/?wc-api=wc_gateway_paykassa_transaction` | Optional, Live-only server-to-server `sci_confirm_transaction_notification` channel |
 
-URLs use `home_url('/')` by default. **External PayKassa base URL (optional)** can point only these four Merchant URLs to a validated public HTTPS base such as an ngrok tunnel. It does not alter WordPress, WooCommerce, order, REST or hosted-payment URLs.
+All URLs use `home_url('/')` by default. **External PayKassa callback base URL (optional)** overrides only the Invoice Payment Notification and Cryptocurrency Transaction Processor URLs, for example when PayKassa must reach a development store through an HTTPS tunnel. Successful payment and malfunction browser returns always use the canonical WordPress home origin so the browser keeps the store's login and WooCommerce session cookies. The override does not alter WordPress, WooCommerce, order, REST or hosted-payment URLs.
 
 Both server callbacks independently verify `private_hash` with PayKassa. Raw callback fields and browser redirects never call `payment_complete()`. The invoice channel supplies invoice-hash-bound `PaymentEvidence`; the transaction channel supplies distinct hashless `TransactionNotificationEvidence`. Credited transaction evidence can settle only when its verified merchant, Live environment, order, amount, currency and system identify exactly one active immutable snapshot. Both then use the same settlement mutex, transaction event identity and `WebhookProcessor`.
 
