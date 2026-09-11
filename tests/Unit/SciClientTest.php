@@ -74,6 +74,82 @@ namespace PayKassaWoo\Tests\Unit {
             self::assertSame('0', SciClientTestTransport::$request_args['body']['test'] ?? null);
         }
 
+        public function test_live_transaction_notification_uses_its_distinct_sci_contract(): void
+        {
+            SciClientTestTransport::$provider_response = $this->transaction_response_fixture();
+
+            $evidence = $this->client()->verify_transaction_notification(str_repeat('f', 64));
+
+            self::assertSame(143, $evidence->order_id);
+            self::assertSame('2431038', $evidence->transaction_id);
+            self::assertSame('e2be8b51ad0ccbae2a2433f8c940035ce97903c7de1a1cefa1db40cc1cabb0e5', $evidence->txid);
+            self::assertSame('30298', $evidence->shop_id);
+            self::assertSame('2.000000', $evidence->amount);
+            self::assertSame('0.000000', $evidence->fee);
+            self::assertSame('USDT', $evidence->currency);
+            self::assertSame('Ethereum_ERC20', $evidence->system);
+            self::assertSame('', $evidence->tag);
+            self::assertSame('12', $evidence->confirmations);
+            self::assertSame('12', $evidence->required_confirmations);
+            self::assertTrue($evidence->is_credited());
+            self::assertSame('live', $evidence->environment);
+            self::assertSame('sci_confirm_transaction_notification', SciClientTestTransport::$request_args['body']['func'] ?? null);
+            self::assertSame('0', SciClientTestTransport::$request_args['body']['test'] ?? null);
+        }
+
+        public function test_pending_transaction_notification_is_verified_without_becoming_credited(): void
+        {
+            SciClientTestTransport::$provider_response = $this->transaction_response_fixture();
+            SciClientTestTransport::$provider_response['data']['status'] = 'no';
+            SciClientTestTransport::$provider_response['data']['confirmations'] = '0';
+
+            $evidence = $this->client()->verify_transaction_notification(str_repeat('g', 64));
+
+            self::assertFalse($evidence->is_credited());
+            self::assertSame('no', $evidence->status);
+            self::assertSame('0', $evidence->confirmations);
+        }
+
+        public function test_transaction_notification_refuses_test_credentials_without_contacting_provider(): void
+        {
+            SciClientTestTransport::$provider_response = $this->transaction_response_fixture();
+            $this->expectException(WebhookVerificationException::class);
+
+            try {
+                (new SciClient('30298', 'merchant-secret', true, new Logger()))->verify_transaction_notification(str_repeat('h', 64));
+            } finally {
+                self::assertSame(array(), SciClientTestTransport::$request_args);
+            }
+        }
+
+        public function test_transaction_notification_rejects_unknown_status(): void
+        {
+            SciClientTestTransport::$provider_response = $this->transaction_response_fixture();
+            SciClientTestTransport::$provider_response['data']['status'] = 'pending';
+            $this->expectException(WebhookVerificationException::class);
+
+            $this->client()->verify_transaction_notification(str_repeat('i', 64));
+        }
+
+        public function test_transaction_notification_rejects_negative_fee(): void
+        {
+            SciClientTestTransport::$provider_response = $this->transaction_response_fixture();
+            SciClientTestTransport::$provider_response['data']['fee'] = '-0.000001';
+            $this->expectException(WebhookVerificationException::class);
+
+            $this->client()->verify_transaction_notification(str_repeat('k', 64));
+        }
+
+        #[DataProvider('invalid_confirmation_values')]
+        public function test_transaction_notification_rejects_ambiguous_confirmation_types(mixed $value): void
+        {
+            SciClientTestTransport::$provider_response = $this->transaction_response_fixture();
+            SciClientTestTransport::$provider_response['data']['confirmations'] = $value;
+            $this->expectException(WebhookVerificationException::class);
+
+            $this->client()->verify_transaction_notification(str_repeat('j', 64));
+        }
+
         #[DataProvider('accepted_optional_metadata')]
         public function test_tag_accepts_only_documented_optional_representations(bool $present, mixed $value, string $expected): void
         {
@@ -106,6 +182,21 @@ namespace PayKassaWoo\Tests\Unit {
             $this->expectException(WebhookVerificationException::class);
 
             $this->client()->verify_ipn(str_repeat('e', 64));
+        }
+
+        public function test_resource_optional_metadata_is_rejected(): void
+        {
+            $resource = tmpfile();
+            self::assertIsResource($resource);
+            $method = new \ReflectionMethod(SciClient::class, 'normalize_optional_address_metadata');
+            $method->setAccessible(true);
+            $this->expectException(WebhookVerificationException::class);
+
+            try {
+                $method->invoke(null, $resource);
+            } finally {
+                fclose($resource);
+            }
         }
 
         /** @return array<string, array{bool, mixed, string}> */
@@ -142,6 +233,19 @@ namespace PayKassaWoo\Tests\Unit {
             );
         }
 
+        /** @return array<string, array{mixed}> */
+        public static function invalid_confirmation_values(): array
+        {
+            return array(
+                'negative integer' => array(-1),
+                'float' => array(1.5),
+                'boolean' => array(false),
+                'negative string' => array('-1'),
+                'decimal string' => array('1.0'),
+                'overlong integer string' => array(str_repeat('9', 20)),
+            );
+        }
+
         private function client(): SciClient
         {
             return new SciClient('30298', 'merchant-secret', false, new Logger());
@@ -163,6 +267,18 @@ namespace PayKassaWoo\Tests\Unit {
         private function live_response_fixture(): array
         {
             $contents = file_get_contents(dirname(__DIR__) . '/fixtures/sci-confirm-order-live-tag-false.json');
+            self::assertIsString($contents);
+
+            $decoded = json_decode($contents, true, 32, JSON_THROW_ON_ERROR);
+            self::assertIsArray($decoded);
+
+            return $decoded;
+        }
+
+        /** @return array<string, mixed> */
+        private function transaction_response_fixture(): array
+        {
+            $contents = file_get_contents(dirname(__DIR__) . '/fixtures/sci-confirm-transaction-live.json');
             self::assertIsString($contents);
 
             $decoded = json_decode($contents, true, 32, JSON_THROW_ON_ERROR);

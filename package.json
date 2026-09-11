@@ -5,6 +5,7 @@
   "scripts": {
     "lint": "node --check assets/build/blocks.js",
     "test": "npm run lint",
+    "test:e2e": "bash scripts/test-browser-e2e.sh",
     "build": "node --check assets/build/blocks.js",
     "plugin-zip": "bash scripts/package.sh"
   }

@@ -56,6 +56,7 @@ cp "$base_dir/tests/fixtures/disposable-site.php" "$site_dir/wp-content/mu-plugi
 for hpos in no yes; do
     "${wp_cli[@]}" option update woocommerce_custom_orders_table_enabled "$hpos"
     PAYKASSA_EXPECT_HPOS="$hpos" "${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-smoke.php" --use-include
+    PAYKASSA_EXPECT_HPOS="$hpos" "${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-merchant-endpoints.php" --use-include
     PAYKASSA_EXPECT_HPOS="$hpos" "${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-reconciliation.php" --use-include
 done
 "${wp_cli[@]}" plugin deactivate paykassa

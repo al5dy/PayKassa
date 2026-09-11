@@ -63,3 +63,35 @@ jobs:
       - run: npm run plugin-zip
       - name: Clean ZIP installation, schema v2 to v3 and payment smoke
         run: bash scripts/test-integration.sh
+  browser:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: paykassa-ci-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      PAYKASSA_TEST_DB_HOST: 127.0.0.1:3306
+      PAYKASSA_TEST_DB_USER: root
+      PAYKASSA_TEST_DB_PASSWORD: paykassa-ci-only
+      PAYKASSA_TEST_WP_VERSION: '7.1'
+      PAYKASSA_TEST_WC_VERSION: '11.1.0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, mbstring, dom, gd
+          tools: wp-cli
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm run plugin-zip
+      - run: npx --yes --package @playwright/cli playwright-cli install-browser chromium
+      - run: npm run test:e2e

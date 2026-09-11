@@ -14,6 +14,7 @@ final class WebhookController
     {
         if ('POST' !== strtoupper((string) ( $_SERVER['REQUEST_METHOD'] ?? '' ))) {
             status_header(405);
+            header('Allow: POST');
             exit;
         }
         // CONTENT_LENGTH is client supplied. Enforce the cap against bytes read
@@ -46,8 +47,9 @@ final class WebhookController
             // Raw order_id selects only an immutable credential context. It is
             // not payment evidence and must match the provider-verified ID.
             $evidence = ( new WebhookCredentialResolver() )->verify($hash, (int) $routing_order_id);
-            $result = ( new WebhookProcessor(new WebhookEventStore(), new Logger()) )->process($evidence);
+            $result = ( new WebhookProcessor(new WebhookEventStore(), new Logger()) )->process($evidence, EvidenceSource::WEBHOOK_INVOICE);
             if ($result['accepted']) {
+                status_header(200);
                 header('Content-Type: text/plain; charset=utf-8');
                 echo $result['ack']; // PayKassa SCI's documented acknowledgement format.
                 exit;

@@ -27,6 +27,28 @@ final class Decimal
         return '' === $fraction ? $whole : $whole . '.' . $fraction;
     }
 
+    /** Compare two unsigned decimal strings without integer or float conversion. */
+    public static function compare(string $left, string $right): ?int
+    {
+        $left = self::normalise($left);
+        $right = self::normalise($right);
+        if ('' === $left || '' === $right) {
+            return null;
+        }
+        [$left_whole, $left_fraction] = array_pad(explode('.', $left, 2), 2, '');
+        [$right_whole, $right_fraction] = array_pad(explode('.', $right, 2), 2, '');
+        if (strlen($left_whole) !== strlen($right_whole)) {
+            return strlen($left_whole) <=> strlen($right_whole);
+        }
+        $whole_comparison = strcmp($left_whole, $right_whole);
+        if (0 !== $whole_comparison) {
+            return $whole_comparison <=> 0;
+        }
+        $scale = max(strlen($left_fraction), strlen($right_fraction));
+        $fraction_comparison = strcmp(str_pad($left_fraction, $scale, '0'), str_pad($right_fraction, $scale, '0'));
+        return $fraction_comparison <=> 0;
+    }
+
     /** Multiply unsigned decimal strings without using binary floating point. */
     public static function multiply(string $left, string $right): string
     {

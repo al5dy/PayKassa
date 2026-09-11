@@ -1,0 +1,24 @@
+{
+  "error": false,
+  "message": "Ok",
+  "data": {
+    "transaction": "2431038",
+    "txid": "e2be8b51ad0ccbae2a2433f8c940035ce97903c7de1a1cefa1db40cc1cabb0e5",
+    "shop_id": "30298",
+    "order_id": "143",
+    "amount": "2.000000",
+    "fee": "0.000000",
+    "currency": "USDT",
+    "system": "Ethereum_ERC20",
+    "address_from": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+    "address": "0x1234567890abcdef1234567890abcdef12345678",
+    "tag": false,
+    "confirmations": 12,
+    "required_confirmations": "12",
+    "status": "yes",
+    "static": "yes",
+    "date_update": "2026-09-11 12:00:00",
+    "explorer_address_link": "https://explorer.paykassa.pro/address/ethereum-erc20-usdt/0x1234567890abcdef1234567890abcdef12345678",
+    "explorer_transaction_link": "https://explorer.paykassa.pro/transaction/ethereum-erc20-usdt/e2be8b51ad0ccbae2a2433f8c940035ce97903c7de1a1cefa1db40cc1cabb0e5"
+  }
+}

@@ -19,7 +19,7 @@ final class WebhookEventStore
         return hash('sha256', $merchant_context . "\0" . $environment . "\0" . $transaction_id);
     }
 
-    public function acquire(string $transaction_id, string $hash_fingerprint, int $order_id, string $merchant_context, string $environment, string $source = 'webhook'): EventReservation
+    public function acquire(string $transaction_id, string $hash_fingerprint, int $order_id, string $merchant_context, string $environment, string $source = EvidenceSource::WEBHOOK_INVOICE): EventReservation
     {
         global $wpdb;
         $table = $wpdb->prefix . 'paykassa_events';

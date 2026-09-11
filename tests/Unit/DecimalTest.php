@@ -26,4 +26,12 @@ final class DecimalTest extends TestCase
         self::assertSame('0.0000001295', Decimal::multiply('0.01', '0.00001295'));
         self::assertSame('12949999.8705', Decimal::multiply('999999.99', '12.95'));
     }
+
+    public function test_compares_decimal_strings_without_float_or_integer_overflow(): void
+    {
+        self::assertSame(0, Decimal::compare('5.000000', '5'));
+        self::assertSame(-1, Decimal::compare('0.999999999999999999', '1'));
+        self::assertSame(1, Decimal::compare('100000000000000000000', '99999999999999999999.99'));
+        self::assertNull(Decimal::compare('1e3', '1000'));
+    }
 }

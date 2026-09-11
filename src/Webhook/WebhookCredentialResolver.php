@@ -8,6 +8,7 @@ use Al5dy\PayKassaWoo\Order\InvoiceLifecycleService;
 use Al5dy\PayKassaWoo\Order\OrderMeta;
 use Al5dy\PayKassaWoo\Order\PaymentSnapshot;
 use Al5dy\PayKassaWoo\PayKassa\Dto\PaymentEvidence;
+use Al5dy\PayKassaWoo\PayKassa\Dto\TransactionNotificationEvidence;
 use Al5dy\PayKassaWoo\PayKassa\Exception\WebhookVerificationException;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\PayKassa\SciCredentialStore;
@@ -54,6 +55,39 @@ final class WebhookCredentialResolver
             return $evidence;
         }
         throw new WebhookVerificationException('No retained SCI credential verified the callback.', 0, $last_rejection);
+    }
+
+    public function verify_transaction_notification(string $private_hash, int $routing_order_id): TransactionNotificationEvidence
+    {
+        $order = wc_get_order($routing_order_id);
+        if (! $order instanceof \WC_Order || 'paykassa' !== $order->get_payment_method()) {
+            throw new WebhookVerificationException('The transaction callback routing order is unavailable.');
+        }
+        $contexts = $this->contexts($order);
+        if (array() === $contexts || count($contexts) > self::MAX_CONTEXTS) {
+            throw new WebhookVerificationException('The transaction callback credential context is unavailable or ambiguous.');
+        }
+
+        $last_rejection = null;
+        foreach ($contexts as $context) {
+            $settings = $this->credentials->settings_for_context($context);
+            // PayKassa documents this SCI method as Live-only. Test profiles
+            // are never sent to the provider for transaction notifications.
+            if (null === $settings || 'yes' === $settings['testmode']) {
+                continue;
+            }
+            try {
+                $evidence = $this->factory->sci($settings)->verify_transaction_notification($private_hash);
+            } catch (WebhookVerificationException $exception) {
+                $last_rejection = $exception;
+                continue;
+            }
+            if ($evidence->order_id !== $routing_order_id) {
+                throw new WebhookVerificationException('The verified transaction order does not match the callback routing hint.');
+            }
+            return $evidence;
+        }
+        throw new WebhookVerificationException('No retained Live SCI credential verified the transaction callback.', 0, $last_rejection);
     }
 
     /** @return list<string> */

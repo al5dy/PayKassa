@@ -9,10 +9,13 @@ use Al5dy\PayKassaWoo\Admin\DiagnosticsPage;
 use Al5dy\PayKassaWoo\Admin\SiteHealth;
 use Al5dy\PayKassaWoo\Blocks\PayKassaPaymentMethod;
 use Al5dy\PayKassaWoo\Gateway\PayKassaGateway;
+use Al5dy\PayKassaWoo\Gateway\BrowserReturnController;
+use Al5dy\PayKassaWoo\Gateway\MerchantEndpointUrls;
 use Al5dy\PayKassaWoo\Infrastructure\Installer;
 use Al5dy\PayKassaWoo\Reconciliation\ReconciliationScheduler;
 use Al5dy\PayKassaWoo\PayKassa\SciCredentialStore;
 use Al5dy\PayKassaWoo\Webhook\WebhookController;
+use Al5dy\PayKassaWoo\Webhook\TransactionNotificationController;
 
 final class Plugin
 {
@@ -54,7 +57,11 @@ final class Plugin
             $methods[] = PayKassaGateway::class;
             return $methods;
         });
-        add_action('woocommerce_api_wc_gateway_paykassa', array( new WebhookController(), 'handle' ));
+        add_action('woocommerce_api_' . MerchantEndpointUrls::INVOICE_NOTIFICATION, array(new WebhookController(), 'handle'));
+        add_action('woocommerce_api_' . MerchantEndpointUrls::TRANSACTION_NOTIFICATION, array(new TransactionNotificationController(), 'handle'));
+        $browser_returns = new BrowserReturnController();
+        add_action('woocommerce_api_' . MerchantEndpointUrls::SUCCESS_RETURN, array($browser_returns, 'success'));
+        add_action('woocommerce_api_' . MerchantEndpointUrls::FAILURE_RETURN, array($browser_returns, 'failure'));
         add_action('woocommerce_blocks_payment_method_type_registration', array( $this, 'register_blocks' ));
         ( new OrderMetaBox() )->register();
         ( new SiteHealth() )->register();

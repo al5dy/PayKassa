@@ -70,7 +70,7 @@ final class Installer
 		owner_token char(64) NULL,
 			lease_expires_at datetime NULL,
 			attempts smallint(5) unsigned NOT NULL DEFAULT 0,
-		source varchar(32) NOT NULL DEFAULT 'webhook',
+		source varchar(32) NOT NULL DEFAULT 'webhook_invoice',
 			created_at datetime NOT NULL,
 			processed_at datetime NULL,
 			error_code varchar(64) NULL,

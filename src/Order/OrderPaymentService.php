@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Al5dy\PayKassaWoo\Order;
 
 use Al5dy\PayKassaWoo\Gateway\GatewayAvailability;
+use Al5dy\PayKassaWoo\Gateway\MinimumPaymentPolicy;
 use Al5dy\PayKassaWoo\Gateway\RedirectUrlValidator;
 use Al5dy\PayKassaWoo\Infrastructure\DatabaseMutex;
 use Al5dy\PayKassaWoo\PayKassa\CurrencyRateClient;
@@ -86,6 +87,7 @@ final class OrderPaymentService
             // A later settings rotation must not make its callback unverifiable.
             $context = ( new SciCredentialStore() )->retain($settings);
             $quote = ( new CurrencyRateClient() )->quote($order_amount, $order_currency, $direction['currency'], $direction['system']);
+            (new MinimumPaymentPolicy())->assert_allows($quote->payment_amount, $direction['system'], $direction['currency'], $settings);
             $sci = ( new PayKassaClientFactory() )->sci($settings);
         } catch (PayKassaException $exception) {
             $locks->fail($order->get_id(), $reservation->owner_token);

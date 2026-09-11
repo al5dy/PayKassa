@@ -116,7 +116,8 @@ $transport = static function ($preempt, array $args, string $url) use (&$active_
             'system' => $systems[$active_order_id] ?? 'BitCoin',
             'amount' => $amounts[$active_order_id] ?? '1.00000000',
             'address' => 'bc1qsmoketestaddress',
-            'tag' => '',
+            // Confirmed LIVE behavior for payment systems without a memo/tag.
+            'tag' => false,
             'partial' => 'no',
         ));
     } else {

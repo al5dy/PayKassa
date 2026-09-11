@@ -7,6 +7,7 @@ namespace Al5dy\PayKassaWoo\PayKassa;
 use Al5dy\PayKassaWoo\Infrastructure\Logger;
 use Al5dy\PayKassaWoo\PayKassa\Dto\PaymentEvidence;
 use Al5dy\PayKassaWoo\PayKassa\Dto\PaymentResult;
+use Al5dy\PayKassaWoo\PayKassa\Dto\TransactionNotificationEvidence;
 use Al5dy\PayKassaWoo\PayKassa\Exception\ConfigurationException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\InvalidResponseException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\PaymentCreationException;
@@ -93,6 +94,63 @@ final class SciClient
         return new PaymentEvidence((int) $order_id, $transaction, Logger::fingerprint($private_hash), $amount, $currency, $system, $address, $tag, $shop_id, $payment_link_hash, $this->test_mode ? 'test' : 'live');
     }
 
+    public function verify_transaction_notification(string $private_hash): TransactionNotificationEvidence
+    {
+        if ($this->test_mode) {
+            throw new WebhookVerificationException('Transaction notifications are available only for retained Live SCI credentials.');
+        }
+        $response = $this->request(array('func' => 'sci_confirm_transaction_notification', 'private_hash' => $private_hash), WebhookVerificationException::class);
+        $data = $response['data'] ?? null;
+        if (! is_array($data)) {
+            throw new WebhookVerificationException('Transaction verification response has no evidence.');
+        }
+        foreach (array('order_id', 'transaction', 'shop_id', 'amount', 'fee', 'currency', 'system', 'status') as $key) {
+            if (! isset($data[$key]) || ! is_string($data[$key]) || '' === $data[$key] || strlen($data[$key]) > 128) {
+                throw new WebhookVerificationException('Transaction verification response has invalid field types.');
+            }
+        }
+        if (! isset($data['txid']) || ! is_string($data['txid']) || '' === $data['txid'] || strlen($data['txid']) > 256) {
+            throw new WebhookVerificationException('Transaction verification response has invalid transaction hash.');
+        }
+        $order_id = filter_var($data['order_id'], FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)));
+        $amount = $data['amount'];
+        $fee = $data['fee'];
+        $status = $data['status'];
+        if (
+            false === $order_id
+            || ! Decimal::equal($amount, $amount)
+            || Decimal::equal($amount, '0')
+            || ! Decimal::equal($fee, $fee)
+            || Decimal::compare($fee, '0') < 0
+            || ! in_array($status, array('no', 'yes'), true)
+        ) {
+            throw new WebhookVerificationException('Transaction verification response is incomplete or ambiguous.');
+        }
+        $address_from = self::normalize_optional_address_metadata($data['address_from'] ?? null);
+        $address = self::normalize_optional_address_metadata($data['address'] ?? null);
+        $tag = self::normalize_optional_address_metadata($data['tag'] ?? null);
+        $confirmations = self::normalize_confirmation_count($data['confirmations'] ?? null);
+        $required_confirmations = self::normalize_confirmation_count($data['required_confirmations'] ?? null);
+
+        return new TransactionNotificationEvidence(
+            (int) $order_id,
+            $data['transaction'],
+            $data['txid'],
+            $data['shop_id'],
+            $amount,
+            $fee,
+            strtoupper($data['currency']),
+            $data['system'],
+            $address_from,
+            $address,
+            $tag,
+            $confirmations,
+            $required_confirmations,
+            $status,
+            Logger::fingerprint($private_hash)
+        );
+    }
+
     private static function normalize_optional_address_metadata(mixed $value): string
     {
         if (false === $value || null === $value) {
@@ -102,6 +160,17 @@ final class SciClient
             throw new WebhookVerificationException('Verification response has invalid address data.');
         }
         return $value;
+    }
+
+    private static function normalize_confirmation_count(mixed $value): string
+    {
+        if (is_int($value) && $value >= 0) {
+            return (string) $value;
+        }
+        if (is_string($value) && preg_match('/^(?:0|[1-9][0-9]{0,18})$/', $value)) {
+            return $value;
+        }
+        throw new WebhookVerificationException('Transaction verification response has invalid confirmation data.');
     }
 
     /** @param array<string, string> $payload @return array<string, mixed> */

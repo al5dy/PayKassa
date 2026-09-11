@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Al5dy\PayKassaWoo\Admin;
 
+use Al5dy\PayKassaWoo\Gateway\MerchantEndpointUrls;
+
 final class SiteHealth
 {
     public function register(): void
@@ -24,7 +26,12 @@ final class SiteHealth
         if ('yes' === ( $settings['enabled'] ?? 'no' ) && ( '' === ( $settings['shop_id'] ?? '' ) || '' === ( $settings['shop_password'] ?? '' ) )) {
             return array( 'label' => __('PayKassa needs merchant credentials', 'paykassa'), 'status' => 'critical', 'badge' => array( 'label' => 'PayKassa', 'color' => 'red' ), 'description' => '<p>' . esc_html__('The gateway is enabled but its merchant credentials are incomplete.', 'paykassa') . '</p>', 'actions' => '' );
         }
-        if ('yes' === ( $settings['enabled'] ?? 'no' ) && 'yes' !== ( $settings['testmode'] ?? 'no' ) && ! is_ssl()) {
+        try {
+            $urls = new MerchantEndpointUrls($settings);
+        } catch (\InvalidArgumentException $exception) {
+            return array( 'label' => __('PayKassa public URL override is invalid', 'paykassa'), 'status' => 'critical', 'badge' => array( 'label' => 'PayKassa', 'color' => 'red' ), 'description' => '<p>' . esc_html__('Correct the External PayKassa base URL before copying Merchant URLs.', 'paykassa') . '</p>', 'actions' => '' );
+        }
+        if ('yes' === ( $settings['enabled'] ?? 'no' ) && 'yes' !== ( $settings['testmode'] ?? 'no' ) && (! is_ssl() || ! $urls->is_https())) {
             return array( 'label' => __('PayKassa needs HTTPS in live mode', 'paykassa'), 'status' => 'critical', 'badge' => array( 'label' => 'PayKassa', 'color' => 'red' ), 'description' => '<p>' . esc_html__('Enable HTTPS before accepting live cryptocurrency payments.', 'paykassa') . '</p>', 'actions' => '' );
         }
         return array( 'label' => __('PayKassa configuration looks ready', 'paykassa'), 'status' => 'good', 'badge' => array( 'label' => 'PayKassa', 'color' => 'blue' ), 'description' => '<p>' . esc_html__('No credentials or HTTPS issue was detected.', 'paykassa') . '</p>', 'actions' => '' );

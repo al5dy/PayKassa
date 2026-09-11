@@ -15,6 +15,7 @@ use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\WebhookVerificationException;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\Webhook\WebhookEventStore;
+use Al5dy\PayKassaWoo\Webhook\EvidenceSource;
 use Al5dy\PayKassaWoo\Webhook\WebhookCredentialResolver;
 use Al5dy\PayKassaWoo\Webhook\WebhookProcessor;
 
@@ -191,7 +192,7 @@ final class ReconciliationService
         if ($evidence->order_id !== $candidate->order_id) {
             return 'unverifiable';
         }
-        $result = $processor->process($evidence, 'reconciliation');
+        $result = $processor->process($evidence, EvidenceSource::RECONCILIATION);
         return 'processed' === $result['outcome'] ? 'recovered' : $result['outcome'];
     }
 
