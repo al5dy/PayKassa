@@ -280,6 +280,14 @@ msgstr ""
 msgid "Leave blank when saving to keep the current secret."
 msgstr ""
 
+#: src/Gateway/PayKassaGateway.php:128
+msgid "Stored value:"
+msgstr "Сохранённое значение:"
+
+#: src/Gateway/PayKassaGateway.php:129
+msgid "Reset value"
+msgstr "Сбросить значение"
+
 #: src/Gateway/PayKassaGateway.php:43
 msgid "Test mode"
 msgstr ""

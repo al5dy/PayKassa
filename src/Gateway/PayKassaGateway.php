@@ -11,6 +11,8 @@ use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 
 final class PayKassaGateway extends \WC_Payment_Gateway
 {
+    private const RESET_SECRET_ACTION_PREFIX = 'paykassa_reset_';
+
     /** @var array<string, mixed> */
     private array $settings_data;
 
@@ -68,7 +70,9 @@ final class PayKassaGateway extends \WC_Payment_Gateway
         }
         foreach (array( 'shop_password', 'api_password' ) as $key) {
             $field = $this->plugin_id . $this->id . '_' . $key;
-            if (isset($_POST[ $field ]) && '' === (string) wp_unslash($_POST[ $field ]) && is_array($stored) && isset($stored[ $key ])) {
+            if ($this->secret_reset_requested($key)) {
+                $_POST[ $field ] = '';
+            } elseif (isset($_POST[ $field ]) && '' === (string) wp_unslash($_POST[ $field ]) && is_array($stored) && isset($stored[ $key ])) {
                 $_POST[ $field ] = $stored[ $key ];
             }
         }
@@ -103,20 +107,57 @@ final class PayKassaGateway extends \WC_Payment_Gateway
         return $saved;
     }
 
-    /** Render an intentionally empty secret field; WC's stock password control reprints its stored value. */
+    /** Render an empty secret field and a masked summary when a value is configured. */
     public function generate_paykassa_secret_html($key, $data): string
     {
         $field_key = $this->get_field_key($key);
         $title = (string) ( $data['title'] ?? '' );
         $description = (string) ( $data['description'] ?? '' );
+        $stored_value = $this->get_option($key, '');
+        $masked_value = is_string($stored_value) ? self::mask_secret($stored_value) : '';
+        $reset_action = self::RESET_SECRET_ACTION_PREFIX . $key;
         ob_start();
         ?>
         <tr valign="top">
             <th scope="row" class="titledesc"><label for="<?php echo esc_attr($field_key); ?>"><?php echo esc_html($title); ?></label></th>
-            <td class="forminp"><input type="password" autocomplete="new-password" name="<?php echo esc_attr($field_key); ?>" id="<?php echo esc_attr($field_key); ?>" value="" /><p class="description"><?php echo esc_html($description); ?></p></td>
+            <td class="forminp">
+                <input type="password" autocomplete="new-password" name="<?php echo esc_attr($field_key); ?>" id="<?php echo esc_attr($field_key); ?>" value="" />
+                <p class="description"><?php echo esc_html($description); ?></p>
+                <?php if ('' !== $masked_value) : ?>
+                    <p class="description paykassa-secret-status">
+                        <span><?php echo esc_html__('Stored value:', 'paykassa'); ?> <code><?php echo esc_html($masked_value); ?></code></span>
+                        <button type="submit" class="button button-secondary" name="save" value="<?php echo esc_attr($reset_action); ?>"><?php echo esc_html__('Reset value', 'paykassa'); ?></button>
+                    </p>
+                <?php endif; ?>
+            </td>
         </tr>
         <?php
         return (string) ob_get_clean();
+    }
+
+    private function secret_reset_requested(string $key): bool
+    {
+        if (! isset($_POST['save']) || ! is_string($_POST['save'])) {
+            return false;
+        }
+        return self::RESET_SECRET_ACTION_PREFIX . $key === wp_unslash($_POST['save']);
+    }
+
+    private static function mask_secret(string $value): string
+    {
+        $length = strlen($value);
+        if (0 === $length) {
+            return '';
+        }
+        if ($length <= 4) {
+            return str_repeat('*', $length);
+        }
+
+        $visible_length = $length - 4;
+        $prefix_length = min(8, max(1, intdiv($visible_length, 2)));
+        $suffix_length = $visible_length - $prefix_length;
+        $suffix = $suffix_length > 0 ? substr($value, -$suffix_length) : '';
+        return substr($value, 0, $prefix_length) . '****' . $suffix;
     }
 
     public function is_available(): bool

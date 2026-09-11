@@ -19,13 +19,88 @@ $original_currency = get_option('woocommerce_currency', false);
 $original_credential_profiles = get_option(SciCredentialStore::OPTION, false);
 $original_settings_migration = get_option(Installer::SETTINGS_MIGRATION_OPTION, false);
 $original_retention_error = get_option(Installer::CREDENTIAL_RETENTION_ERROR, false);
+$original_post = $_POST;
 $legacy = require __DIR__ . '/../fixtures/legacy-settings.php';
 
 try {
     update_option('woocommerce_currency', 'USD', false);
     delete_option('woocommerce_paykassa_settings');
-    $fresh_fields = (new PayKassaGateway())->get_form_fields();
+    $fresh_gateway = new PayKassaGateway();
+    $fresh_fields = $fresh_gateway->get_form_fields();
     paykassa_upgrade_assert(array('USD') === ($fresh_fields['accepted_order_currencies']['default'] ?? null), 'Fresh USD installation must default Accepted WooCommerce currencies to USD.');
+    foreach (array( 'shop_password', 'api_password' ) as $secret_key) {
+        $empty_secret_html = $fresh_gateway->generate_paykassa_secret_html($secret_key, $fresh_fields[$secret_key]);
+        paykassa_upgrade_assert(! str_contains($empty_secret_html, 'paykassa-secret-status'), sprintf('Empty %s field must not display a stored-value summary.', $secret_key));
+    }
+
+    $secret_settings = array(
+        'shop_id' => 'secret-ui-merchant',
+        'shop_password' => '6RGBqNhxABCDpFmpuJx0O1gD',
+        'testmode' => 'yes',
+        'api_id' => 'secret-ui-api',
+        'api_password' => 'apiPasswABCDordSuffix12',
+    );
+    update_option('woocommerce_paykassa_settings', $secret_settings, false);
+    $configured_gateway = new PayKassaGateway();
+    $configured_fields = $configured_gateway->get_form_fields();
+    $masked_secrets = array(
+        'shop_password' => '6RGBqNhx****pFmpuJx0O1gD',
+        'api_password' => 'apiPassw****ordSuffix12',
+    );
+    foreach ($masked_secrets as $secret_key => $masked_value) {
+        $configured_secret_html = $configured_gateway->generate_paykassa_secret_html($secret_key, $configured_fields[$secret_key]);
+        paykassa_upgrade_assert(str_contains($configured_secret_html, 'value=""'), sprintf('Configured %s field must keep its submitted value empty.', $secret_key));
+        paykassa_upgrade_assert(str_contains($configured_secret_html, $masked_value), sprintf('Configured %s field must display its masked stored-value summary.', $secret_key));
+        paykassa_upgrade_assert(str_contains($configured_secret_html, 'value="paykassa_reset_' . $secret_key . '"'), sprintf('Configured %s field must display its reset button.', $secret_key));
+        paykassa_upgrade_assert(! str_contains($configured_secret_html, $secret_settings[$secret_key]), sprintf('Configured %s value must never be rendered in full.', $secret_key));
+    }
+
+    $secret_post_base = array(
+        $configured_gateway->get_field_key('shop_id') => $secret_settings['shop_id'],
+        $configured_gateway->get_field_key('testmode') => '1',
+        $configured_gateway->get_field_key('api_id') => $secret_settings['api_id'],
+    );
+    $_POST = $secret_post_base + array(
+        $configured_gateway->get_field_key('shop_password') => '',
+        $configured_gateway->get_field_key('api_password') => '',
+        'save' => 'Save changes',
+    );
+    paykassa_upgrade_assert($configured_gateway->process_admin_options(), 'Saving empty secret inputs must preserve their stored values.');
+    $saved_secrets = get_option('woocommerce_paykassa_settings', array());
+    paykassa_upgrade_assert(is_array($saved_secrets) && $secret_settings['shop_password'] === ($saved_secrets['shop_password'] ?? null) && $secret_settings['api_password'] === ($saved_secrets['api_password'] ?? null), 'Empty secret inputs must not overwrite stored values.');
+
+    $replacement_merchant_secret = 'replacement-merchant-secret';
+    $_POST = $secret_post_base + array(
+        $configured_gateway->get_field_key('shop_password') => $replacement_merchant_secret,
+        $configured_gateway->get_field_key('api_password') => '',
+        'save' => 'Save changes',
+    );
+    paykassa_upgrade_assert($configured_gateway->process_admin_options(), 'A non-empty Merchant secret input must replace its stored value.');
+    $saved_secrets = get_option('woocommerce_paykassa_settings', array());
+    paykassa_upgrade_assert(is_array($saved_secrets) && $replacement_merchant_secret === ($saved_secrets['shop_password'] ?? null) && $secret_settings['api_password'] === ($saved_secrets['api_password'] ?? null), 'Replacing Merchant secret must preserve the empty API password input.');
+
+    $_POST = $secret_post_base + array(
+        $configured_gateway->get_field_key('shop_password') => '',
+        $configured_gateway->get_field_key('api_password') => '',
+        'save' => 'paykassa_reset_api_password',
+    );
+    paykassa_upgrade_assert($configured_gateway->process_admin_options(), 'The API password reset button must save successfully.');
+    $saved_secrets = get_option('woocommerce_paykassa_settings', array());
+    paykassa_upgrade_assert(is_array($saved_secrets) && $replacement_merchant_secret === ($saved_secrets['shop_password'] ?? null) && '' === ($saved_secrets['api_password'] ?? null), 'Resetting API password must clear only API password.');
+
+    $_POST = $secret_post_base + array(
+        $configured_gateway->get_field_key('shop_password') => '',
+        $configured_gateway->get_field_key('api_password') => '',
+        'save' => 'paykassa_reset_shop_password',
+    );
+    paykassa_upgrade_assert($configured_gateway->process_admin_options(), 'The Merchant secret reset button must save successfully.');
+    $saved_secrets = get_option('woocommerce_paykassa_settings', array());
+    paykassa_upgrade_assert(is_array($saved_secrets) && '' === ($saved_secrets['shop_password'] ?? null) && '' === ($saved_secrets['api_password'] ?? null), 'Resetting Merchant secret must clear only Merchant secret.');
+    $reset_gateway = new PayKassaGateway();
+    paykassa_upgrade_assert(! str_contains($reset_gateway->generate_paykassa_secret_html('shop_password', $configured_fields['shop_password']), 'paykassa-secret-status'), 'A reset Merchant secret must no longer display a stored-value summary.');
+    paykassa_upgrade_assert(! str_contains($reset_gateway->generate_paykassa_secret_html('api_password', $configured_fields['api_password']), 'paykassa-secret-status'), 'A reset API password must no longer display a stored-value summary.');
+    $_POST = $original_post;
+
     $legacy['enabled_systems'] = 'tron_trc20';
     update_option('woocommerce_paykassa_settings', $legacy, false);
     update_option(Installer::OPTION, '0', false);
@@ -208,4 +283,5 @@ try {
     } else {
         update_option(Installer::CREDENTIAL_RETENTION_ERROR, $original_retention_error, false);
     }
+    $_POST = $original_post;
 }
