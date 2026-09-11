@@ -6,7 +6,10 @@ namespace Al5dy\PayKassaWoo\Order;
 
 final class PaymentState
 {
+    public const INVOICE_CREATING = 'invoice_creating';
     public const INVOICE_CREATED = 'invoice_created';
+    public const INVOICE_UNCERTAIN = 'invoice_uncertain';
+    public const INVOICE_FAILED = 'invoice_failed';
     public const AWAITING_PAYMENT = 'awaiting_payment';
     public const EXPIRED = 'expired';
     public const PAID = 'paid';
@@ -15,9 +18,12 @@ final class PaymentState
 
     /** @var array<string, list<string>> */
     private const TRANSITIONS = array(
-        self::INVOICE_CREATED => array( self::AWAITING_PAYMENT, self::CONFLICTED, self::MANUAL_REVIEW ),
+        self::INVOICE_CREATING => array( self::INVOICE_CREATED, self::INVOICE_UNCERTAIN, self::INVOICE_FAILED, self::MANUAL_REVIEW ),
+        self::INVOICE_CREATED => array( self::AWAITING_PAYMENT, self::EXPIRED, self::PAID, self::CONFLICTED, self::MANUAL_REVIEW ),
+        self::INVOICE_UNCERTAIN => array( self::INVOICE_CREATED, self::INVOICE_FAILED, self::MANUAL_REVIEW ),
+        self::INVOICE_FAILED => array( self::INVOICE_CREATING, self::MANUAL_REVIEW ),
         self::AWAITING_PAYMENT => array( self::PAID, self::CONFLICTED, self::MANUAL_REVIEW, self::EXPIRED ),
-        self::EXPIRED => array( self::INVOICE_CREATED, self::MANUAL_REVIEW ),
+        self::EXPIRED => array( self::INVOICE_CREATING, self::INVOICE_CREATED, self::MANUAL_REVIEW ),
         self::MANUAL_REVIEW => array( self::PAID ),
         self::PAID => array(),
         self::CONFLICTED => array(),

@@ -7,6 +7,7 @@ namespace Al5dy\PayKassaWoo\Webhook;
 use Al5dy\PayKassaWoo\Infrastructure\Logger;
 use Al5dy\PayKassaWoo\Infrastructure\DatabaseMutex;
 use Al5dy\PayKassaWoo\Order\OrderMeta;
+use Al5dy\PayKassaWoo\Order\InvoiceLifecycleService;
 use Al5dy\PayKassaWoo\Order\PaymentSnapshot;
 use Al5dy\PayKassaWoo\Order\PaymentState;
 use Al5dy\PayKassaWoo\PayKassa\Dto\PaymentEvidence;
@@ -48,14 +49,19 @@ final class WebhookProcessor
         $order->get_data_store()->read($order);
         $order->read_meta_data(true);
         $snapshot = PaymentSnapshot::from_json((string) $order->get_meta(OrderMeta::SNAPSHOT, true));
-        if (! $snapshot instanceof PaymentSnapshot) {
+        $retired_snapshot = $this->matching_retired_snapshot($order, $evidence);
+        if (! $snapshot instanceof PaymentSnapshot && ! $retired_snapshot instanceof PaymentSnapshot) {
             return $this->retry();
         }
 
-        $context = '' !== $snapshot->merchant_context
-            ? $snapshot->merchant_context
-            : hash('sha256', $evidence->shop_id . "\0" . $snapshot->environment());
-        $reservation = $this->events->acquire($evidence->transaction_id, $evidence->hash_fingerprint, $order->get_id(), $context, $snapshot->environment(), $source);
+        $reference_snapshot = $retired_snapshot instanceof PaymentSnapshot ? $retired_snapshot : $snapshot;
+        if (! $reference_snapshot instanceof PaymentSnapshot) {
+            return $this->retry();
+        }
+        $context = '' !== $reference_snapshot->merchant_context
+            ? $reference_snapshot->merchant_context
+            : hash('sha256', $evidence->shop_id . "\0" . $reference_snapshot->environment());
+        $reservation = $this->events->acquire($evidence->transaction_id, $evidence->hash_fingerprint, $order->get_id(), $context, $reference_snapshot->environment(), $source);
         if (EventReservation::ERROR === $reservation->status) {
             $this->logger->log('error', 'webhook_event_store_failed', array('order_id' => $order->get_id(), 'transaction_id' => $evidence->transaction_id));
             return $this->retry();
@@ -65,7 +71,7 @@ final class WebhookProcessor
             if ('rejected' === $status) {
                 return array('accepted' => false, 'ack' => '', 'outcome' => 'manual_review');
             }
-            if (! $this->matches($snapshot, $evidence, $order)) {
+            if (! $retired_snapshot instanceof PaymentSnapshot && (! $snapshot instanceof PaymentSnapshot || ! $this->matches($snapshot, $evidence, $order))) {
                 return $this->retry();
             }
             return in_array($status, array('processed', 'duplicate', 'manual_review'), true) ? $this->ack($order, 'manual_review' === $status ? $status : 'duplicate') : $this->retry();
@@ -76,9 +82,31 @@ final class WebhookProcessor
 
         try {
             $mutex->assert_owned();
-            if (! $this->matches($snapshot, $evidence, $order)) {
+            if ($retired_snapshot instanceof PaymentSnapshot) {
+                return $this->record_manual_payment(
+                    $reservation,
+                    $order,
+                    $evidence,
+                    $source,
+                    'retired_invoice_payment',
+                    __('PayKassa verified a payment for a retired invoice. The order was not fulfilled; manual financial review is required.', 'paykassa')
+                );
+            }
+            if (! $snapshot instanceof PaymentSnapshot || ! $this->matches($snapshot, $evidence, $order)) {
+                $order->update_meta_data('_paykassa_manual_review_reason', 'verified_payment_mismatch');
                 $this->mark_manual_review($order, __('PayKassa verified a payment that does not match the immutable invoice snapshot. Manual review required.', 'paykassa'));
                 return $this->finished($reservation->event_key, $reservation->owner_token, 'rejected', 'payment_mismatch', false, $order);
+            }
+            $manual_reason = (string) $order->get_meta('_paykassa_manual_review_reason', true);
+            if (in_array($manual_reason, array( 'retired_invoice_payment', 'verified_payment_mismatch' ), true)) {
+                return $this->record_manual_payment(
+                    $reservation,
+                    $order,
+                    $evidence,
+                    $source,
+                    'payment_after_retired_invoice',
+                    __('PayKassa verified another payment while an earlier verified payment conflict is unresolved. Automatic fulfilment remains blocked.', 'paykassa')
+                );
             }
             $stored_transaction = (string) $order->get_meta(OrderMeta::TRANSACTION, true);
             if ($order->has_status(wc_get_is_paid_statuses()) || ('' !== $stored_transaction && ! hash_equals($stored_transaction, $evidence->transaction_id))) {
@@ -180,6 +208,56 @@ final class WebhookProcessor
             && hash_equals($snapshot->provider_invoice_id, $evidence->payment_link_hash)
             && '' !== $expected_shop
             && hash_equals($expected_shop, $evidence->shop_id);
+    }
+
+    private function matching_retired_snapshot(\WC_Order $order, PaymentEvidence $evidence): ?PaymentSnapshot
+    {
+        foreach (InvoiceLifecycleService::retired_snapshots($order) as $snapshot) {
+            $legacy_settings = get_option('woocommerce_paykassa_settings', array());
+            $expected_shop = '' !== $snapshot->merchant_shop_id ? $snapshot->merchant_shop_id : (is_array($legacy_settings) ? (string) ($legacy_settings['shop_id'] ?? '') : '');
+            if (
+                $snapshot->order_id === $order->get_id()
+                && $snapshot->environment() === $evidence->environment
+                && Decimal::equal($snapshot->payment_amount, $evidence->amount)
+                && strtoupper($snapshot->provider_currency) === strtoupper($evidence->currency)
+                && strtolower($snapshot->provider_system) === strtolower($evidence->system)
+                && hash_equals($snapshot->provider_invoice_id, $evidence->payment_link_hash)
+                && '' !== $expected_shop
+                && hash_equals($expected_shop, $evidence->shop_id)
+            ) {
+                return $snapshot;
+            }
+        }
+        return null;
+    }
+
+    private function record_manual_payment(
+        EventReservation $reservation,
+        \WC_Order $order,
+        PaymentEvidence $evidence,
+        string $source,
+        string $reason,
+        string $note
+    ): array {
+        $additional = $order->get_meta('_paykassa_additional_transactions', true);
+        $additional = is_array($additional) ? $additional : array();
+        $additional[$evidence->transaction_id] = array(
+            'amount' => $evidence->amount,
+            'currency' => $evidence->currency,
+            'system' => $evidence->system,
+            'environment' => $evidence->environment,
+            'source' => $source,
+            'reason' => $reason,
+            'at' => gmdate('c'),
+        );
+        $order->update_meta_data('_paykassa_additional_transactions', $additional);
+        $order->update_meta_data('_paykassa_additional_transaction_id', $evidence->transaction_id);
+        if ('' === (string) $order->get_meta('_paykassa_manual_review_reason', true)) {
+            $order->update_meta_data('_paykassa_manual_review_reason', 'retired_invoice_payment');
+        }
+        $this->mark_manual_review($order, $note);
+        do_action('paykassa_payment_conflict', $order, $evidence);
+        return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', $reason, true, $order);
     }
 
     private function mark_manual_review(\WC_Order $order, string $note): void

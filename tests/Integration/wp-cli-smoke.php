@@ -5,6 +5,8 @@ use Al5dy\PayKassaWoo\Gateway\GatewayAvailability;
 use Al5dy\PayKassaWoo\Order\OrderMeta;
 use Al5dy\PayKassaWoo\Order\PaymentSnapshot;
 use Al5dy\PayKassaWoo\Order\PaymentState;
+use Al5dy\PayKassaWoo\Order\InvoiceLifecycleService;
+use Al5dy\PayKassaWoo\Order\InvoiceLockStatus;
 use Al5dy\PayKassaWoo\Order\InvoiceLockStore;
 use Al5dy\PayKassaWoo\Order\InvoiceReservation;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
@@ -12,6 +14,7 @@ use Al5dy\PayKassaWoo\PayKassa\Dto\PaymentEvidence;
 use Al5dy\PayKassaWoo\Webhook\WebhookEventStore;
 use Al5dy\PayKassaWoo\Webhook\WebhookProcessor;
 use Al5dy\PayKassaWoo\Infrastructure\Logger;
+use Automattic\WooCommerce\Utilities\OrderUtil;
 
 function paykassa_smoke_assert(bool $condition, string $message): void
 {
@@ -40,6 +43,8 @@ $create_calls = 0;
 $amounts = array();
 $currencies = array();
 $systems = array();
+$hashes = array();
+$create_behaviors = array();
 
 $settings = array(
     'enabled' => 'yes',
@@ -56,7 +61,7 @@ $settings = array(
 update_option('woocommerce_paykassa_settings', $settings, false);
 update_option('woocommerce_currency', 'BTC', false);
 
-$transport = static function ($preempt, array $args, string $url) use (&$active_order_id, &$create_calls, &$amounts, &$currencies, &$systems): array {
+$transport = static function ($preempt, array $args, string $url) use (&$active_order_id, &$create_calls, &$amounts, &$currencies, &$systems, &$hashes, &$create_behaviors) {
     $body = is_array($args['body'] ?? null) ? $args['body'] : array();
     if ('https://currency.paykassa.pro/pairs.php' === $url) {
         $pairs = isset($body['pairs']) && is_array($body['pairs']) ? $body['pairs'] : array();
@@ -74,16 +79,26 @@ $transport = static function ($preempt, array $args, string $url) use (&$active_
     }
     if ('sci_create_order' === $function) {
         ++$create_calls;
-        $amounts[(int) $body['order_id']] = (string) $body['amount'];
-        $currencies[(int) $body['order_id']] = (string) $body['currency'];
-        $systems[(int) $body['order_id']] = array(11 => 'BitCoin', 12 => 'Ethereum', 30 => 'TRON_TRC20')[(int) $body['system']] ?? '';
-        $hash = hash('sha256', (string) $body['order_id']);
+        $request_order_id = (int) $body['order_id'];
+        $amounts[$request_order_id] = (string) $body['amount'];
+        $currencies[$request_order_id] = (string) $body['currency'];
+        $systems[$request_order_id] = array(11 => 'BitCoin', 12 => 'Ethereum', 30 => 'TRON_TRC20')[(int) $body['system']] ?? '';
+        $behavior = $create_behaviors[$request_order_id] ?? 'success';
+        if ('timeout' === $behavior) {
+            return new WP_Error('http_request_failed', 'Simulated ambiguous timeout after provider create may have started.');
+        }
+        if ('reject' === $behavior) {
+            $payload = array('error' => true, 'message' => 'Rejected by sandbox fixture.', 'data' => array());
+            return array('headers' => array(), 'body' => wp_json_encode($payload), 'response' => array('code' => 200, 'message' => 'OK'), 'cookies' => array(), 'filename' => null);
+        }
+        $hash = hash('sha256', (string) $body['order_id'] . ':' . $create_calls);
+        $hashes[$request_order_id] = $hash;
         $payload = array('error' => false, 'message' => 'OK', 'data' => array('url' => 'https://paykassa.app/pay/smoke?hash=' . $hash, 'params' => array('hash' => $hash)));
     } elseif ('sci_confirm_order' === $function) {
         $payload = array('error' => false, 'message' => 'OK', 'data' => array(
             'order_id' => (string) $active_order_id,
             'transaction' => 'transaction-' . $active_order_id,
-            'hash' => hash('sha256', (string) $active_order_id),
+            'hash' => $hashes[$active_order_id] ?? hash('sha256', (string) $active_order_id),
             'shop_id' => 'test-merchant',
             'currency' => $currencies[$active_order_id] ?? 'BTC',
             'system' => $systems[$active_order_id] ?? 'BitCoin',
@@ -99,10 +114,14 @@ $transport = static function ($preempt, array $args, string $url) use (&$active_
 };
 
 add_filter('pre_http_request', $transport, 10, 3);
-$mail_transport = static function (): bool { return true; };
+$mail_transport = static function (): bool {
+    return true;
+};
 add_filter('pre_wp_mail', $mail_transport);
 
 try {
+    $expected_hpos = getenv('PAYKASSA_EXPECT_HPOS');
+    paykassa_smoke_assert(in_array($expected_hpos, array('yes', 'no'), true) && ('yes' === $expected_hpos) === OrderUtil::custom_orders_table_usage_is_enabled(), 'Requested HPOS store must actually be active for the invoice lifecycle smoke.');
     $gateway = new PayKassaGateway();
     paykassa_smoke_assert($gateway->is_available(), 'Gateway must be available for configured BTC checkout.');
 
@@ -115,9 +134,36 @@ try {
     $order = wc_get_order($order->get_id());
     $snapshot = PaymentSnapshot::from_json((string) $order->get_meta(OrderMeta::SNAPSHOT, true));
     paykassa_smoke_assert($snapshot instanceof PaymentSnapshot && $snapshot->order_id === $order->get_id(), 'Snapshot must use the internal WooCommerce order ID.');
+    paykassa_smoke_assert($snapshot instanceof PaymentSnapshot && ! $snapshot->expiration_is_known() && null === $snapshot->expires_at, 'SCI createOrder has no documented expiry field; the snapshot must record an explicit unknown expiration, never an invented quote TTL.');
+    paykassa_smoke_assert(InvoiceLockStatus::CREATED === (new InvoiceLockStore())->status($order->get_id()) && PaymentState::AWAITING_PAYMENT === $order->get_meta(OrderMeta::STATE, true), 'A successful create must finish the explicit creating -> created -> awaiting lifecycle.');
 
     $retry = $gateway->process_payment($order->get_id());
     paykassa_smoke_assert('success' === $retry['result'] && 1 === $create_calls, 'Payment retry must reuse the active invoice and not call provider creation again.');
+
+    $legacy_order = paykassa_smoke_order();
+    $orders[] = $legacy_order->get_id();
+    $legacy_hash = hash('sha256', 'legacy-active-link-' . $legacy_order->get_id());
+    $legacy_context = hash('sha256', "test-merchant\0test");
+    $legacy_snapshot = new PaymentSnapshot($legacy_order->get_id(), '1.00000000', 'BTC', 'BitCoin', 'BTC', $legacy_hash, '2026-09-10T00:00:00+00:00', true, 'hosted', $legacy_context, '', 'test-merchant');
+    $legacy_json = (string) wp_json_encode($legacy_snapshot->to_array());
+    $legacy_url = 'https://paykassa.app/pay/legacy?hash=' . $legacy_hash;
+    $legacy_order->update_meta_data(OrderMeta::SNAPSHOT, $legacy_json);
+    $legacy_order->update_meta_data(OrderMeta::STATE, PaymentState::AWAITING_PAYMENT);
+    $legacy_order->update_meta_data('_paykassa_redirect_url', $legacy_url);
+    $legacy_order->save();
+    global $wpdb;
+    paykassa_smoke_assert(1 === $wpdb->insert($wpdb->prefix . 'paykassa_invoice_locks', array(
+        'order_id' => $legacy_order->get_id(),
+        'status' => InvoiceLockStatus::CREATED,
+        'snapshot_hash' => hash('sha256', $legacy_json),
+        'lease_expires_at' => null,
+        'attempts' => 1,
+        'created_at' => '2026-09-10 00:00:00',
+        'updated_at' => '2026-09-10 00:00:00',
+    )), 'Legacy active-invoice fixture must be inserted.');
+    $before_legacy_reuse = $create_calls;
+    $legacy_retry = $gateway->process_payment($legacy_order->get_id());
+    paykassa_smoke_assert('success' === $legacy_retry['result'] && $legacy_url === $legacy_retry['redirect'] && $before_legacy_reuse === $create_calls, 'Upgrade must preserve and reuse a schema-v3 snapshot hashed with expires_at="" without creating a duplicate invoice.');
 
     $active_order_id = $order->get_id();
     $client = (new PayKassaClientFactory())->sci($settings);
@@ -159,6 +205,79 @@ try {
     $usd_usdt = wc_get_order($usd_usdt->get_id());
     paykassa_smoke_assert($usd_usdt instanceof WC_Order && $usd_usdt->has_status(wc_get_is_paid_statuses()) && 'USD' === $usd_usdt->get_currency(), 'Fiat order must remain USD after crypto settlement.');
     unset($_POST['paykassa_direction']);
+
+    $lifecycle = new InvoiceLifecycleService();
+    $expired_order = paykassa_smoke_order();
+    $orders[] = $expired_order->get_id();
+    $_POST['paykassa_system'] = 'bitcoin';
+    $before_expired_create = $create_calls;
+    paykassa_smoke_assert('success' === $gateway->process_payment($expired_order->get_id())['result'], 'Expiry lifecycle fixture invoice must be created.');
+    $expired_order = wc_get_order($expired_order->get_id());
+    $expired_snapshot = PaymentSnapshot::from_json((string) $expired_order->get_meta(OrderMeta::SNAPSHOT, true));
+    paykassa_smoke_assert($expired_snapshot instanceof PaymentSnapshot, 'Created invoice must have a snapshot before retirement.');
+    $retired_hash = $expired_snapshot->provider_invoice_id;
+    $lifecycle->expire_current($expired_order, 'integration_confirmed_invoice_unusable', 1);
+    $expired_order = wc_get_order($expired_order->get_id());
+    paykassa_smoke_assert(
+        PaymentState::EXPIRED === $expired_order->get_meta(OrderMeta::STATE, true)
+        && InvoiceLockStatus::EXPIRED === (new InvoiceLockStore())->status($expired_order->get_id())
+        && '' === $expired_order->get_meta(OrderMeta::SNAPSHOT, true)
+        && '' === $expired_order->get_meta('_paykassa_redirect_url', true)
+        && 1 === count(InvoiceLifecycleService::retired_snapshots($expired_order)),
+        'Retiring a created invoice must archive its immutable snapshot, clear the active redirect, and make exactly one replacement eligible.'
+    );
+    paykassa_smoke_assert('success' === $gateway->process_payment($expired_order->get_id())['result'] && $before_expired_create + 2 === $create_calls, 'An explicitly retired invoice must allow exactly one replacement create.');
+    $expired_order = wc_get_order($expired_order->get_id());
+    $replacement_snapshot = PaymentSnapshot::from_json((string) $expired_order->get_meta(OrderMeta::SNAPSHOT, true));
+    paykassa_smoke_assert($replacement_snapshot instanceof PaymentSnapshot && ! hash_equals($retired_hash, $replacement_snapshot->provider_invoice_id), 'Replacement invoice identity must be distinct from the archived invoice identity.');
+
+    $retired_transaction = 'retired-' . wp_generate_uuid4();
+    $transactions[] = $retired_transaction;
+    $retired_evidence = new PaymentEvidence(
+        $expired_order->get_id(),
+        $retired_transaction,
+        hash('sha256', 'retired-private-hash'),
+        $expired_snapshot->payment_amount,
+        $expired_snapshot->provider_currency,
+        $expired_snapshot->provider_system,
+        'retired-payment-address',
+        '',
+        'test-merchant',
+        $retired_hash,
+        'test'
+    );
+    $retired_result = $processor->process($retired_evidence);
+    $expired_order = wc_get_order($expired_order->get_id());
+    paykassa_smoke_assert($retired_result['accepted'] && 'manual_review' === $retired_result['outcome'] && ! $expired_order->is_paid() && PaymentState::MANUAL_REVIEW === $expired_order->get_meta(OrderMeta::STATE, true), 'A provider-verified payment for a retired invoice must be acknowledged and held for manual review, never auto-fulfilled against its replacement.');
+
+    $uncertain_order = paykassa_smoke_order();
+    $orders[] = $uncertain_order->get_id();
+    $create_behaviors[$uncertain_order->get_id()] = 'timeout';
+    $before_timeout = $create_calls;
+    paykassa_smoke_assert('failure' === $gateway->process_payment($uncertain_order->get_id())['result'], 'An ambiguous SCI timeout must fail checkout safely.');
+    $uncertain_order = wc_get_order($uncertain_order->get_id());
+    paykassa_smoke_assert(
+        $before_timeout + 1 === $create_calls
+        && InvoiceLockStatus::UNCERTAIN === (new InvoiceLockStore())->status($uncertain_order->get_id())
+        && PaymentState::INVOICE_UNCERTAIN === $uncertain_order->get_meta(OrderMeta::STATE, true),
+        'An ambiguous timeout must persist an uncertain lifecycle state in both the durable lock and WooCommerce diagnostics.'
+    );
+    $create_behaviors[$uncertain_order->get_id()] = 'success';
+    paykassa_smoke_assert('failure' === $gateway->process_payment($uncertain_order->get_id())['result'] && $before_timeout + 1 === $create_calls, 'Uncertain must never reclaim automatically or call SCI a second time.');
+    $lifecycle->resolve_uncertain_as_failed($uncertain_order, 1);
+    $uncertain_order = wc_get_order($uncertain_order->get_id());
+    paykassa_smoke_assert(InvoiceLockStatus::FAILED === (new InvoiceLockStore())->status($uncertain_order->get_id()) && PaymentState::INVOICE_FAILED === $uncertain_order->get_meta(OrderMeta::STATE, true), 'Explicit merchant resolution must atomically make one uncertain attempt retryable.');
+    paykassa_smoke_assert('success' === $gateway->process_payment($uncertain_order->get_id())['result'] && $before_timeout + 2 === $create_calls, 'A manually resolved uncertain attempt must permit one new provider create.');
+
+    $rejected_order = paykassa_smoke_order();
+    $orders[] = $rejected_order->get_id();
+    $create_behaviors[$rejected_order->get_id()] = 'reject';
+    $before_reject = $create_calls;
+    paykassa_smoke_assert('failure' === $gateway->process_payment($rejected_order->get_id())['result'], 'A documented provider rejection must fail checkout.');
+    $rejected_order = wc_get_order($rejected_order->get_id());
+    paykassa_smoke_assert(InvoiceLockStatus::FAILED === (new InvoiceLockStore())->status($rejected_order->get_id()) && PaymentState::INVOICE_FAILED === $rejected_order->get_meta(OrderMeta::STATE, true), 'A definitive error=true create rejection must be failed, not uncertain.');
+    $create_behaviors[$rejected_order->get_id()] = 'success';
+    paykassa_smoke_assert('success' === $gateway->process_payment($rejected_order->get_id())['result'] && $before_reject + 2 === $create_calls, 'A definitive rejected create must be retryable without manual uncertain resolution.');
 
     $wrong_merchant = paykassa_smoke_order();
     $orders[] = $wrong_merchant->get_id();
@@ -242,9 +361,24 @@ try {
     $lock_store = new InvoiceLockStore();
     $first_lock = $lock_store->acquire($concurrent_order->get_id());
     $second_lock = $lock_store->acquire($concurrent_order->get_id());
-    paykassa_smoke_assert(InvoiceReservation::ACQUIRED === $first_lock->status && InvoiceReservation::BUSY === $second_lock->status, 'Concurrent invoice creation must have one reservation owner.');
+    paykassa_smoke_assert(InvoiceReservation::ACQUIRED === $first_lock->status && InvoiceReservation::BUSY === $second_lock->status && InvoiceLockStatus::PREPARING === $lock_store->status($concurrent_order->get_id()), 'Concurrent invoice preparation must have one reservation owner.');
+    paykassa_smoke_assert($lock_store->begin_creation($concurrent_order->get_id(), $first_lock->owner_token), 'The owner must explicitly cross the remote provider-create boundary.');
+    $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}paykassa_invoice_locks SET lease_expires_at = '2000-01-01 00:00:00' WHERE order_id = %d", $concurrent_order->get_id()));
+    $abandoned_remote = $lock_store->acquire($concurrent_order->get_id());
+    paykassa_smoke_assert(InvoiceReservation::BUSY === $abandoned_remote->status && InvoiceLockStatus::UNCERTAIN === $lock_store->status($concurrent_order->get_id()), 'An expired lease after the provider boundary must freeze as uncertain and must never auto-reclaim.');
+    $lifecycle->resolve_uncertain_as_failed($concurrent_order, 1);
+    $resolved_remote = $lock_store->acquire($concurrent_order->get_id());
+    paykassa_smoke_assert($resolved_remote->acquired(), 'Only explicit merchant resolution may release an abandoned remote create for retry.');
+    paykassa_smoke_assert($lock_store->fail($concurrent_order->get_id(), $resolved_remote->owner_token), 'Resolved remote-create test reservation must be releasable.');
 
-    WP_CLI::success('PayKassa HPOS smoke: invoice idempotency, matching IPN, duplicate IPN, merchant/hash/amount mismatch, and late payment passed.');
+    $preparing_order = paykassa_smoke_order();
+    $orders[] = $preparing_order->get_id();
+    $preparing_first = $lock_store->acquire($preparing_order->get_id());
+    $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}paykassa_invoice_locks SET lease_expires_at = '2000-01-01 00:00:00' WHERE order_id = %d", $preparing_order->get_id()));
+    $preparing_reclaimed = $lock_store->acquire($preparing_order->get_id());
+    paykassa_smoke_assert($preparing_first->acquired() && $preparing_reclaimed->acquired() && ! $lock_store->fail($preparing_order->get_id(), $preparing_first->owner_token) && $lock_store->fail($preparing_order->get_id(), $preparing_reclaimed->owner_token), 'Only a pre-provider preparing lease may be reclaimed, and the new owner token must fence the stale worker.');
+
+    WP_CLI::success('PayKassa smoke: invoice lifecycle/retry fencing, idempotency, matching IPN, duplicate IPN, merchant/hash/amount mismatch, and late payment passed; HPOS=' . (OrderUtil::custom_orders_table_usage_is_enabled() ? 'on' : 'off') . '.');
 } finally {
     remove_filter('pre_http_request', $transport, 10);
     // Keep the test-only mail transport installed through WordPress shutdown: queued

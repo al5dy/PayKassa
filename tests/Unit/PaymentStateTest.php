@@ -17,6 +17,10 @@ final class PaymentStateTest extends TestCase
 
     public function test_all_declared_transitions_and_rejections_are_explicit(): void
     {
+        self::assertTrue(PaymentState::can_transition(PaymentState::INVOICE_CREATING, PaymentState::INVOICE_CREATED));
+        self::assertTrue(PaymentState::can_transition(PaymentState::INVOICE_CREATING, PaymentState::INVOICE_UNCERTAIN));
+        self::assertTrue(PaymentState::can_transition(PaymentState::INVOICE_UNCERTAIN, PaymentState::INVOICE_FAILED));
+        self::assertTrue(PaymentState::can_transition(PaymentState::INVOICE_FAILED, PaymentState::INVOICE_CREATING));
         self::assertTrue(PaymentState::can_transition(PaymentState::INVOICE_CREATED, PaymentState::AWAITING_PAYMENT));
         self::assertTrue(PaymentState::can_transition(PaymentState::AWAITING_PAYMENT, PaymentState::EXPIRED));
         self::assertTrue(PaymentState::can_transition(PaymentState::EXPIRED, PaymentState::INVOICE_CREATED));

@@ -44,4 +44,18 @@ final class PaymentSnapshotTest extends TestCase
         self::assertSame('TRON_TRC20', $decoded->provider_system);
         self::assertSame('USD_USDT', $decoded->conversion_pair);
     }
+
+    public function test_unknown_provider_expiration_is_explicit_and_legacy_hash_stays_stable(): void
+    {
+        $snapshot = new PaymentSnapshot(123, '100.00', 'USD', 'TRON_TRC20', 'USDT', 'link-hash', '2026-01-01T00:00:00+00:00', true, 'hosted', 'context', null, 'merchant-7', '99.843217');
+        self::assertFalse($snapshot->expiration_is_known());
+        self::assertFalse($snapshot->is_expired(strtotime('2036-01-01T00:00:00+00:00')));
+
+        $legacy = $snapshot->to_array();
+        $legacy['expires_at'] = '';
+        $decoded = PaymentSnapshot::from_json((string) json_encode($legacy));
+        self::assertInstanceOf(PaymentSnapshot::class, $decoded);
+        self::assertNull($decoded->expires_at);
+        self::assertSame(hash('sha256', json_encode($legacy, JSON_THROW_ON_ERROR)), $decoded->fingerprint());
+    }
 }

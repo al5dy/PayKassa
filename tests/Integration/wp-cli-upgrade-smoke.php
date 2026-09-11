@@ -41,6 +41,32 @@ try {
     Installer::migrate();
     paykassa_upgrade_assert($migrated === get_option('woocommerce_paykassa_settings', array()), 'Migration must be idempotent and retain normalized settings.');
 
+    // Exact partial-refactor state observed in a real upgraded store: the new
+    // key existed as an empty placeholder while the configured legacy system
+    // still carried the merchant's intended payment method.
+    $partial_refactor = array_replace($legacy, array(
+        'accepted_order_currencies' => array('USD', 'BTC', 'ETH', 'LTC'),
+        'enabled_payment_directions' => array(),
+        'enabled_systems' => 'tron_trc20',
+    ));
+    update_option('woocommerce_currency', 'USD', false);
+    update_option('woocommerce_paykassa_settings', $partial_refactor, false);
+    Installer::migrate_gateway_settings();
+    $partial_migrated = get_option('woocommerce_paykassa_settings', array());
+    paykassa_upgrade_assert(array('USD', 'BTC', 'ETH', 'LTC') === ($partial_migrated['accepted_order_currencies'] ?? null), 'Existing supported accepted currencies must survive the partial-refactor migration.');
+    paykassa_upgrade_assert(array('tron_trc20:USDT') === ($partial_migrated['enabled_payment_directions'] ?? null), 'An empty new direction placeholder must migrate the non-empty legacy enabled_systems value.');
+    paykassa_upgrade_assert(! array_key_exists('enabled_systems', $partial_migrated), 'Migration must consume the legacy system setting so fallback cannot remain dynamic.');
+    paykassa_upgrade_assert((new PayKassaGateway())->is_available(), 'The exact upgraded USD-store fixture must retain gateway availability.');
+
+    // After legacy data has been consumed, an explicit empty current list is
+    // merchant intent and must remain fail-closed on every later request.
+    $partial_migrated['enabled_payment_directions'] = array();
+    update_option('woocommerce_paykassa_settings', $partial_migrated, false);
+    Installer::migrate_gateway_settings();
+    $explicitly_disabled = get_option('woocommerce_paykassa_settings', array());
+    paykassa_upgrade_assert(array() === ($explicitly_disabled['enabled_payment_directions'] ?? null), 'A post-migration explicit empty direction list must stay disabled.');
+    paykassa_upgrade_assert(! (new PayKassaGateway())->is_available(), 'Consumed legacy settings must not re-enable intentionally disabled payment directions.');
+
     $blank_legacy = $legacy;
     unset($blank_legacy['enabled_systems']);
     unset($blank_legacy['accepted_order_currencies'], $blank_legacy['enabled_payment_directions']);

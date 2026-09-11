@@ -113,6 +113,7 @@ foreach (array('paykassa_events', 'paykassa_invoice_locks') as $suffix) {
 $locks = new InvoiceLockStore();
 $lock = $locks->acquire(103);
 $assert($lock->acquired() && 64 === strlen($lock->owner_token), 'New invoice reservation must persist its owner token after upgrade.');
+$assert($locks->begin_creation(103, $lock->owner_token), 'Invoice reservation must explicitly cross the provider-create boundary after upgrade.');
 $assert($locks->complete(103, $lock->owner_token, hash('sha256', 'new-snapshot')), 'Token-guarded invoice completion must work after upgrade.');
 $events = new WebhookEventStore();
 $event = $events->acquire('schema-v3-transaction', hash('sha256', 'new-fingerprint'), 103, hash('sha256', 'schema-v2-merchant'), 'test');
@@ -172,4 +173,6 @@ $assert_preserved($old_rows, $old_settings);
 
 // Leave the throwaway site usable for the ordinary payment smoke afterwards.
 delete_option('woocommerce_paykassa_settings');
+$wpdb->query("DELETE FROM {$wpdb->prefix}paykassa_events WHERE order_id IN (101, 102, 103)");
+$wpdb->query("DELETE FROM {$wpdb->prefix}paykassa_invoice_locks WHERE order_id IN (101, 102, 103)");
 WP_CLI::success('Schema v2 -> v3: automatic upgrade, both owner_token columns, data preservation, token SQL, idempotency and failed-DDL retry passed.');

@@ -80,7 +80,18 @@ $make = static function (string $currency = 'BTC') use (&$orders, &$evidence, $c
     $orders[] = $order->get_id();
     $_POST['paykassa_system'] = 'ETH' === $currency ? 'ethereum' : 'bitcoin';
     $result = (new PayKassaGateway())->process_payment($order->get_id());
-    $check('success' === ($result['result'] ?? ''), 'Invoice creation must succeed.');
+    if ('success' !== ($result['result'] ?? '')) {
+        global $wpdb;
+        $failed_order = wc_get_order($order->get_id());
+        $lock_status = $wpdb->get_var($wpdb->prepare("SELECT status FROM {$wpdb->prefix}paykassa_invoice_locks WHERE order_id = %d", $order->get_id()));
+        throw new RuntimeException('Invoice creation must succeed: ' . wp_json_encode(array(
+            'order_id' => $order->get_id(),
+            'payment_state' => $failed_order instanceof WC_Order ? $failed_order->get_meta(OrderMeta::STATE, true) : 'missing',
+            'lock_status' => $lock_status,
+            'database_error' => $wpdb->last_error,
+        )));
+    }
+    $check(true, 'Invoice creation succeeded.');
     $token = hash('sha256', 'synthetic-token-' . $order->get_id());
     $evidence[$token] = array(
         'order_id' => (string) $order->get_id(), 'transaction' => 'recovery-' . $order->get_id(),
@@ -425,6 +436,12 @@ try {
         if ($order instanceof WC_Order) {
             $order->delete(true);
         }
+    }
+    global $wpdb;
+    if ($orders) {
+        $placeholders = implode(',', array_fill(0, count($orders), '%d'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}paykassa_events WHERE order_id IN ({$placeholders})", ...$orders));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}paykassa_invoice_locks WHERE order_id IN ({$placeholders})", ...$orders));
     }
     $reset();
     ReconciliationScheduler::unschedule();

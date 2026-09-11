@@ -97,8 +97,13 @@ final class Installer
         }
 
         $registry = new PaymentSystemRegistry();
-        if (! array_key_exists('enabled_payment_directions', $settings)) {
-            $legacy_systems = self::string_list($settings['enabled_systems'] ?? '');
+        $has_directions = array_key_exists('enabled_payment_directions', $settings);
+        $legacy_systems = self::string_list($settings['enabled_systems'] ?? '');
+        $empty_migration_placeholder = $has_directions
+            && is_array($settings['enabled_payment_directions'])
+            && array() === $settings['enabled_payment_directions']
+            && array() !== $legacy_systems;
+        if (! $has_directions || $empty_migration_placeholder) {
             $directions = array();
             foreach ($registry->directions() as $key => $direction) {
                 if (array() === $legacy_systems || in_array($direction['system_key'], $legacy_systems, true)) {
@@ -113,6 +118,13 @@ final class Installer
                 $settings['enabled_payment_directions'] = $directions;
                 $changed = true;
             }
+        }
+        // Consume the legacy setting after conversion/normalization. This
+        // makes the fallback one-shot: a merchant may later intentionally
+        // disable every current direction without old values re-enabling it.
+        if (array_key_exists('enabled_systems', $settings)) {
+            unset($settings['enabled_systems']);
+            $changed = true;
         }
         if ($changed) {
             update_option(self::SETTINGS_OPTION, $settings, false);

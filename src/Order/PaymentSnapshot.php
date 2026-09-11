@@ -26,7 +26,7 @@ final class PaymentSnapshot
         public readonly bool $test_mode,
         public readonly string $mode = 'hosted',
         public readonly string $merchant_context = '',
-        public readonly string $expires_at = '',
+        public readonly ?string $expires_at = null,
         public readonly string $merchant_shop_id = '',
         string $payment_amount = '',
         string $conversion_pair = '',
@@ -53,14 +53,29 @@ final class PaymentSnapshot
 
     public function is_expired(?int $now = null): bool
     {
-        if ('' === $this->expires_at) {
+        if (null === $this->expires_at) {
             return false;
         }
         $timestamp = strtotime($this->expires_at);
         return false !== $timestamp && $timestamp <= ( $now ?? time() );
     }
 
-    /** @return array<string, int|string|bool> */
+    public function expiration_is_known(): bool
+    {
+        return null !== $this->expires_at && false !== strtotime($this->expires_at);
+    }
+
+    public function fingerprint(): string
+    {
+        $data = $this->to_array();
+        // Schema-v3 locks were hashed while an unknown expiration was encoded
+        // as an empty string. Preserve that identity across the nullable-field
+        // migration so existing active invoices remain reusable after upgrade.
+        $data['expires_at'] = $data['expires_at'] ?? '';
+        return hash('sha256', json_encode($data, JSON_THROW_ON_ERROR));
+    }
+
+    /** @return array<string, int|string|bool|null> */
     public function to_array(): array
     {
         return array(
@@ -83,8 +98,15 @@ final class PaymentSnapshot
         if (! is_array($data)) {
             return null;
         }
+        return self::from_array($data);
+    }
+
+    /** @param array<string, mixed> $data */
+    public static function from_array(array $data): ?self
+    {
         try {
-            return new self((int) ( $data['order_id'] ?? 0 ), (string) ( $data['order_amount'] ?? $data['expected_amount'] ?? '' ), (string) ( $data['order_currency'] ?? '' ), (string) ( $data['payment_system'] ?? $data['provider_system'] ?? '' ), (string) ( $data['payment_currency'] ?? $data['provider_currency'] ?? '' ), (string) ( $data['provider_invoice_id'] ?? '' ), (string) ( $data['created_at'] ?? '' ), (bool) ( $data['test_mode'] ?? false ), (string) ( $data['mode'] ?? 'hosted' ), (string) ( $data['merchant_context'] ?? '' ), (string) ( $data['expires_at'] ?? '' ), (string) ( $data['merchant_shop_id'] ?? '' ), (string) ( $data['payment_amount'] ?? $data['order_amount'] ?? $data['expected_amount'] ?? '' ), (string) ( $data['conversion_pair'] ?? '' ), (string) ( $data['conversion_rate'] ?? '' ), (string) ( $data['conversion_source'] ?? '' ), (string) ( $data['conversion_quoted_at'] ?? '' ));
+            $expires_at = isset($data['expires_at']) && is_string($data['expires_at']) && '' !== $data['expires_at'] ? $data['expires_at'] : null;
+            return new self((int) ( $data['order_id'] ?? 0 ), (string) ( $data['order_amount'] ?? $data['expected_amount'] ?? '' ), (string) ( $data['order_currency'] ?? '' ), (string) ( $data['payment_system'] ?? $data['provider_system'] ?? '' ), (string) ( $data['payment_currency'] ?? $data['provider_currency'] ?? '' ), (string) ( $data['provider_invoice_id'] ?? '' ), (string) ( $data['created_at'] ?? '' ), (bool) ( $data['test_mode'] ?? false ), (string) ( $data['mode'] ?? 'hosted' ), (string) ( $data['merchant_context'] ?? '' ), $expires_at, (string) ( $data['merchant_shop_id'] ?? '' ), (string) ( $data['payment_amount'] ?? $data['order_amount'] ?? $data['expected_amount'] ?? '' ), (string) ( $data['conversion_pair'] ?? '' ), (string) ( $data['conversion_rate'] ?? '' ), (string) ( $data['conversion_source'] ?? '' ), (string) ( $data['conversion_quoted_at'] ?? '' ));
         } catch (InvalidArgumentException $exception) {
             return null;
         }
