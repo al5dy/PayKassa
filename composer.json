@@ -2,7 +2,7 @@
   "name": "al5dy/paykassa-for-woocommerce",
   "description": "PayKassa for WooCommerce",
   "type": "wordpress-plugin",
-  "license": "GPL-3.0-or-later",
+  "license": "GPL-2.0-or-later",
   "require": {
     "php": ">=8.1"
   },

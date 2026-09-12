@@ -266,4 +266,6 @@ PayKassa service information, terms and privacy information are available from P
 
 ## License
 
-GPL-3.0-or-later.
+PayKassa for WooCommerce is licensed under the GNU General Public License v2.0 or later.
+
+Copyright © 2026 Anton Lokotkov.

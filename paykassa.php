@@ -7,8 +7,8 @@
  * Requires PHP: 8.1
  * Requires Plugins: woocommerce
  * Author: al5dy
- * License: GPL-3.0-or-later
- * License URI: https://www.gnu.org/licenses/gpl-3.0.html
+ * License: GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: paykassa
  * Domain Path: /languages
  * WC requires at least: 8.5

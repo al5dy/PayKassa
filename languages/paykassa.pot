@@ -1,5 +1,5 @@
 # Copyright (C) 2026 al5dy
-# This file is distributed under the GPL-3.0-or-later.
+# This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
 "Project-Id-Version: PayKassa for WooCommerce 2.0.0\n"

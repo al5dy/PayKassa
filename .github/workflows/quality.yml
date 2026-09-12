@@ -94,3 +94,18 @@ jobs:
       - run: npm run plugin-zip
       - run: npx --yes --package @playwright/cli playwright-cli install-browser chromium
       - run: npm run test:e2e
+quality-gate:
+    name: Quality Gate
+    needs:
+      - test
+      - integration
+      - browser
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify quality jobs
+        run: |
+          test "${{ needs.test.result }}" = "success"
+          test "${{ needs.integration.result }}" = "success"
+          test "${{ needs.browser.result }}" = "success"
