@@ -150,6 +150,10 @@ final class MerchantEndpointUrlsTest extends TestCase
             'fragment' => array('https://public.example/store#callbacks'),
             'malformed host' => array('https:///store'),
             'relative URL' => array('/wordpress/'),
+            'encoded parent traversal' => array('https://public.example/%2e%2e/'),
+            'encoded current traversal' => array('https://public.example/store/%2E/'),
+            'encoded backslash' => array('https://public.example/store/%5cprivate/'),
+            'encoded control character' => array('https://public.example/store/%0d%0aLocation/'),
         );
     }
 }

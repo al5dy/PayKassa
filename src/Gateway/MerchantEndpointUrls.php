@@ -117,6 +117,10 @@ final class MerchantEndpointUrls
         if (! in_array($scheme, array('http', 'https'), true) || ($live_mode && 'https' !== $scheme)) {
             throw new \InvalidArgumentException('External PayKassa base URL must use HTTPS in Live mode.');
         }
+        $path = $parts['path'] ?? '/';
+        if (! is_string($path) || ! str_starts_with($path, '/') || ! self::is_safe_path($path)) {
+            throw new \InvalidArgumentException('External PayKassa base URL has an unsafe path.');
+        }
         return self::with_trailing_slash($url);
     }
 
@@ -133,6 +137,20 @@ final class MerchantEndpointUrls
     private static function with_trailing_slash(string $url): string
     {
         return rtrim($url, '/') . '/';
+    }
+
+    private static function is_safe_path(string $path): bool
+    {
+        $decoded_path = rawurldecode($path);
+        if (str_contains($decoded_path, '\\') || 1 === preg_match('/[\x00-\x1F\x7F]/', $decoded_path)) {
+            return false;
+        }
+        foreach (explode('/', $decoded_path) as $segment) {
+            if ('.' === $segment || '..' === $segment) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** @param array<string, mixed> $settings */

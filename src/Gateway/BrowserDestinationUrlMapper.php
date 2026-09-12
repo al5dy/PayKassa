@@ -25,8 +25,22 @@ final class BrowserDestinationUrlMapper
         $settings = get_option('woocommerce_paykassa_settings', array());
         $settings = is_array($settings) ? $settings : array();
         $canonical_base_url = home_url('/');
+        $browser_settings = array(
+            'testmode' => $settings['testmode'] ?? 'no',
+            'browser_return_base_url' => $settings['browser_return_base_url'] ?? '',
+        );
 
-        return new self(new MerchantEndpointUrls($settings, $canonical_base_url), $canonical_base_url);
+        // An invalid value saved by an older plugin version must not make the
+        // endpoint-registration bootstrap fatal. Admin save remains strict;
+        // runtime safely falls back to the canonical storefront until fixed.
+        try {
+            $endpoint_urls = new MerchantEndpointUrls($browser_settings, $canonical_base_url);
+        } catch (\InvalidArgumentException) {
+            $browser_settings['browser_return_base_url'] = '';
+            $endpoint_urls = new MerchantEndpointUrls($browser_settings, $canonical_base_url);
+        }
+
+        return new self($endpoint_urls, $canonical_base_url);
     }
 
     /**
@@ -114,11 +128,11 @@ final class BrowserDestinationUrlMapper
 
     private static function normalize_trusted_base(string $url): string
     {
-        $parts = self::url_parts($url, false);
-        if (null === $parts || null !== $parts['query'] || null !== $parts['fragment']) {
+        try {
+            return MerchantEndpointUrls::normalize_external_base_url($url, false);
+        } catch (\InvalidArgumentException) {
             throw new \InvalidArgumentException('PayKassa browser destination base URL is invalid.');
         }
-        return rtrim($url, '/') . '/';
     }
 
     /**

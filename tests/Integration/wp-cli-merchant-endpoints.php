@@ -374,6 +374,36 @@ try {
         'An unsafe browser destination filter result must be ignored without permitting an external redirect.'
     );
 
+    update_option(
+        'woocommerce_paykassa_settings',
+        array_replace($live_settings, array('browser_return_base_url' => 'https://public.example/%2e%2e/')),
+        false
+    );
+    $invalid_stored_mapper = BrowserDestinationUrlMapper::from_current_settings();
+    $canonical_fallback = home_url('/checkout/order-received/145/?key=wc_order_safe');
+    paykassa_endpoint_assert(
+        $canonical_fallback === $invalid_stored_mapper->map($canonical_fallback, 'browser_return_success'),
+        'A legacy stored browser base with encoded traversal must fall back to canonical home without a bootstrap exception.'
+    );
+    update_option(
+        'woocommerce_paykassa_settings',
+        array_replace(
+            $live_settings,
+            array(
+                'external_base_url' => 'https://callbacks.example/%2e%2e/',
+                'browser_return_base_url' => 'https://public.example/storefront/',
+            )
+        ),
+        false
+    );
+    $independent_browser_mapper = BrowserDestinationUrlMapper::from_current_settings();
+    paykassa_endpoint_assert(
+        'https://public.example/storefront/checkout/order-received/145/?key=wc_order_safe'
+            === $independent_browser_mapper->map($canonical_fallback, 'browser_return_success'),
+        'An invalid callback-only base must not disable an independently valid browser-return override.'
+    );
+    update_option('woocommerce_paykassa_settings', $live_settings, false);
+
     update_option('woocommerce_paykassa_settings', array_replace($live_settings, array('minimum_payment_directions' => 'Ethereum_ERC20:USDT=5')), false);
     $minimum_order = $make_order(0, 'paykassa', '2.000000');
     $orders[] = $minimum_order->get_id();
