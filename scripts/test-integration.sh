@@ -48,7 +48,13 @@ cp "$base_dir/tests/fixtures/disposable-site.php" "$site_dir/wp-content/mu-plugi
 "${wp_cli[@]}" core install --url=http://paykassa.test --title='PayKassa integration' \
     --admin_user=paykassa_test --admin_password=local-test-password \
     --admin_email=paykassa@example.invalid --skip-email
-"${wp_cli[@]}" plugin install woocommerce --version="${PAYKASSA_TEST_WC_VERSION:-11.1.0}" --activate
+"${wp_cli[@]}" plugin install woocommerce --version="${PAYKASSA_TEST_WC_VERSION:-11.1.0}"
+if ! "${wp_cli[@]}" plugin activate woocommerce; then
+    # Some local XAMPP builds can terminate the first activation while
+    # WooCommerce probes optional image formats. Activation is idempotent.
+    "${wp_cli[@]}" plugin activate woocommerce
+fi
+"${wp_cli[@]}" option delete wc_installing >/dev/null 2>&1 || true
 "${wp_cli[@]}" plugin install "$plugin_zip" --activate
 "${wp_cli[@]}" eval 'if (! \Al5dy\PayKassaWoo\Infrastructure\Installer::schema_is_valid()) { throw new \RuntimeException("Fresh activation did not create the required schema."); }'
 "${wp_cli[@]}" eval-file "$base_dir/tests/Integration/wp-cli-schema-upgrade.php" --use-include

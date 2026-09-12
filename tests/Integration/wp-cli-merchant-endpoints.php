@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Al5dy\PayKassaWoo\Gateway\BrowserReturnAccess;
 use Al5dy\PayKassaWoo\Gateway\BrowserReturnController;
+use Al5dy\PayKassaWoo\Gateway\BrowserDestinationUrlMapper;
 use Al5dy\PayKassaWoo\Gateway\MerchantEndpointUrls;
 use Al5dy\PayKassaWoo\Gateway\PayKassaGateway;
 use Al5dy\PayKassaWoo\Admin\DiagnosticsPage;
@@ -261,7 +262,8 @@ try {
     (new WP_User($owner_id))->set_role('customer');
     (new WP_User($other_id))->set_role('customer');
     $return_access = new BrowserReturnAccess();
-    $return_controller = new BrowserReturnController($return_access, new Logger());
+    $destination_mapper = new BrowserDestinationUrlMapper($urls, home_url('/'));
+    $return_controller = new BrowserReturnController($return_access, new Logger(), $destination_mapper);
 
     $registered_paid = $make_order($owner_id);
     $orders[] = $registered_paid->get_id();
@@ -269,7 +271,11 @@ try {
     $paid_before_return = $payment_completions[$registered_paid->get_id()] ?? 0;
     wp_set_current_user($owner_id);
     $destination = $return_controller->destination('success', $registered_paid->get_id());
-    paykassa_endpoint_assert($destination['authorized'] && $registered_paid->get_checkout_order_received_url() === $destination['url'], 'Registered owner of a paid order must reach the native order-received URL.');
+    paykassa_endpoint_assert(
+        $destination['authorized']
+        && $destination_mapper->map($registered_paid->get_checkout_order_received_url(), 'browser_return_success') === $destination['url'],
+        'Registered owner of a paid order must reach the order-received path on the configured public browser origin.'
+    );
     paykassa_endpoint_assert($paid_before_return === ($payment_completions[$registered_paid->get_id()] ?? 0), 'Successful browser return must not call payment_complete again.');
     wp_set_current_user($other_id);
     $denied = $return_controller->destination('success', $registered_paid->get_id());
@@ -303,7 +309,11 @@ try {
     $grants = WC()->session->get('paykassa_return_orders', array());
     paykassa_endpoint_assert(is_array($grants) && isset($grants[(string) $guest->get_id()]) && ! str_contains(wp_json_encode($grants), $guest->get_order_key()), 'Guest return session must store only an HMAC marker, never the raw order key.');
     $guest_success = $return_controller->destination('success', $guest->get_id());
-    paykassa_endpoint_assert($guest_success['authorized'] && $guest->get_checkout_order_received_url() === $guest_success['url'], 'Guest with a valid session marker must reach the native order-received URL.');
+    paykassa_endpoint_assert(
+        $guest_success['authorized']
+        && $destination_mapper->map($guest->get_checkout_order_received_url(), 'browser_return_success') === $guest_success['url'],
+        'Guest with a valid session marker must reach the order-received path on the configured public browser origin.'
+    );
     WC()->session->set('paykassa_return_orders', array());
     $guest_denied = $return_controller->destination('success', $guest->get_id());
     paykassa_endpoint_assert(! $guest_denied['authorized'] && ! str_contains($guest_denied['url'], $guest->get_order_key()), 'Guest with a lost session must receive a generic fallback without order data.');
@@ -327,7 +337,7 @@ try {
         $failure_guest instanceof WC_Order
         && $failure['authorized']
         && 'browser_cancel' === $failure['event']
-        && $failure_guest->get_checkout_payment_url() === $failure['url']
+        && $destination_mapper->map($failure_guest->get_checkout_payment_url(), 'browser_cancel') === $failure['url']
         && $failure_before_status === $failure_guest->get_status()
         && ! $failure_guest->is_paid()
         && 0 === ($payment_completions[$failure_guest->get_id()] ?? 0),
@@ -336,7 +346,33 @@ try {
     $return_access->grant($registered_paid);
     wp_set_current_user($owner_id);
     $paid_failure = $return_controller->destination('failure', $registered_paid->get_id());
-    paykassa_endpoint_assert($paid_failure['authorized'] && $registered_paid->get_checkout_order_received_url() === $paid_failure['url'] && $paid_before_return === ($payment_completions[$registered_paid->get_id()] ?? 0), 'Failure return for an already-paid order must use order-received and never initiate another payment.');
+    paykassa_endpoint_assert(
+        $paid_failure['authorized']
+        && $destination_mapper->map($registered_paid->get_checkout_order_received_url(), 'browser_return_success') === $paid_failure['url']
+        && $paid_before_return === ($payment_completions[$registered_paid->get_id()] ?? 0),
+        'Failure return for an already-paid order must use the public order-received destination and never initiate another payment.'
+    );
+
+    $native_received_url = $registered_paid->get_checkout_order_received_url();
+    $unfiltered_received_url = $destination_mapper->map($native_received_url, 'browser_return_success');
+    $safe_destination_filter = static fn (string $url): string => add_query_arg('paykassa_return', 'verified', $url);
+    add_filter(BrowserDestinationUrlMapper::DESTINATION_FILTER, $safe_destination_filter);
+    $filtered_received_url = $destination_mapper->map($native_received_url, 'browser_return_success');
+    remove_filter(BrowserDestinationUrlMapper::DESTINATION_FILTER, $safe_destination_filter);
+    paykassa_endpoint_assert(
+        str_starts_with($filtered_received_url, $urls->browser_return_base_url())
+        && str_contains($filtered_received_url, 'paykassa_return=verified')
+        && $destination_mapper->is_safe_browser_destination($filtered_received_url),
+        'The browser destination filter may customize only a URL that remains inside the configured public browser base.'
+    );
+    $unsafe_destination_filter = static fn (): string => 'https://provider.example/redirect?key=leak';
+    add_filter(BrowserDestinationUrlMapper::DESTINATION_FILTER, $unsafe_destination_filter);
+    $rejected_filtered_url = $destination_mapper->map($native_received_url, 'browser_return_success');
+    remove_filter(BrowserDestinationUrlMapper::DESTINATION_FILTER, $unsafe_destination_filter);
+    paykassa_endpoint_assert(
+        $unfiltered_received_url === $rejected_filtered_url && ! str_contains($rejected_filtered_url, 'provider.example'),
+        'An unsafe browser destination filter result must be ignored without permitting an external redirect.'
+    );
 
     update_option('woocommerce_paykassa_settings', array_replace($live_settings, array('minimum_payment_directions' => 'Ethereum_ERC20:USDT=5')), false);
     $minimum_order = $make_order(0, 'paykassa', '2.000000');

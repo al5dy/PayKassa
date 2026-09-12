@@ -12,6 +12,18 @@ if ('https' === strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')))
     $_SERVER['HTTPS'] = 'on';
 }
 
+add_filter('home_url', static function (string $url, string $path): string {
+    $canonical = get_option('paykassa_browser_canonical_home', '');
+    if (! is_string($canonical) || '' === $canonical) {
+        return $url;
+    }
+    return rtrim($canonical, '/') . ('/' === $path ? '/' : '/' . ltrim($path, '/'));
+}, PHP_INT_MAX, 2);
+
+// The disposable public proxy owns the public origin; WordPress must not
+// canonicalize browser requests back to its private upstream host.
+add_filter('redirect_canonical', '__return_false');
+
 add_action('init', static function (): void {
     if ('GET' === strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) && '1' === ($_GET['paykassa_browser_merchant_urls'] ?? null)) {
         $settings = get_option('woocommerce_paykassa_settings', array());
@@ -24,6 +36,7 @@ add_action('init', static function (): void {
             'transaction_notification_url' => $urls->transaction_notification_url(),
             'callback_source' => $urls->server_callback_source(),
             'browser_return_source' => $urls->browser_return_source(),
+            'canonical_home_url_reversed' => strrev(home_url('/')),
         ));
     }
     if (
@@ -38,7 +51,6 @@ add_action('init', static function (): void {
             exit;
         }
         $settings['external_base_url'] = $callback_base;
-        $settings['browser_return_base_url'] = '';
         update_option('woocommerce_paykassa_settings', $settings, false);
         status_header(204);
         exit;

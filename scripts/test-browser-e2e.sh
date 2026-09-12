@@ -6,9 +6,11 @@ plugin_zip=${PAYKASSA_TEST_PLUGIN_ZIP:-"$base_dir/dist/paykassa-2.0.0.zip"}
 backend_port=${PAYKASSA_E2E_PORT:-8892}
 public_port=${PAYKASSA_E2E_PUBLIC_PORT:-$((backend_port + 1))}
 callback_port=${PAYKASSA_E2E_CALLBACK_PORT:-$((backend_port + 2))}
+private_port=${PAYKASSA_E2E_PRIVATE_PORT:-$((backend_port + 3))}
 backend_url="http://127.0.0.1:${backend_port}"
 base_url="https://localhost:${public_port}"
 split_callback_base_url="https://127.0.0.1:${callback_port}"
+canonical_url="https://127.0.0.1:${private_port}"
 site_dir=$(mktemp -d /tmp/paykassa-browser.XXXXXXXX)
 task_id=${site_dir##*.}
 database="paykassa_browser_${task_id,,}"
@@ -70,9 +72,10 @@ database_created=true
 mkdir -p "$site_dir/wp-content/mu-plugins"
 cp "$base_dir/tests/fixtures/disposable-site.php" "$site_dir/wp-content/mu-plugins/paykassa-test-isolation.php"
 cp "$base_dir/tests/fixtures/browser-provider.php" "$site_dir/wp-content/mu-plugins/paykassa-browser-provider.php"
-"${wp_cli[@]}" core install --url="$base_url" --title='PayKassa browser test' \
+"${wp_cli[@]}" core install --url="$canonical_url" --title='PayKassa browser test' \
 	--admin_user=paykassa_test --admin_password=local-test-password \
 	--admin_email=paykassa@example.invalid --skip-email
+"${wp_cli[@]}" option update paykassa_browser_canonical_home "$canonical_url/"
 mkdir -p "$site_dir/wp-content/themes/paykassa-browser-test"
 cp -R "$base_dir/tests/fixtures/browser-theme/." "$site_dir/wp-content/themes/paykassa-browser-test/"
 "${wp_cli[@]}" theme activate paykassa-browser-test
@@ -103,6 +106,7 @@ settings_json=$(printf '{"enabled":"yes","shop_id":"browser-shop","shop_password
 "${wp_cli[@]}" option update woocommerce_paykassa_settings "$settings_json" --format=json
 "${wp_cli[@]}" option update paykassa_browser_split_callback_base "$split_callback_base_url/"
 product_id=$("${wp_cli[@]}" eval '$product = new WC_Product_Simple(); $product->set_name("Browser PayKassa Product"); $product->set_regular_price("2.00"); $product->set_price("2.00"); $product->set_virtual(true); $product->set_status("publish"); echo $product->save();')
+unauthorized_order_id=$("${wp_cli[@]}" eval '$order = wc_create_order(); if (is_wp_error($order)) { throw new RuntimeException($order->get_error_message()); } $order->set_currency("USD"); $order->set_total("2.00"); $order->set_payment_method("paykassa"); echo $order->save();')
 "${wp_cli[@]}" rewrite structure '/%postname%/' --hard
 
 mkdir -p "$base_dir/output/playwright"
@@ -113,21 +117,24 @@ openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 1 \
 	-addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' >/dev/null 2>&1
 PHP_CLI_SERVER_WORKERS=4 "${wp_cli[@]}" server --host=127.0.0.1 --port="$backend_port" >"$base_dir/output/playwright/wp-server.log" 2>&1 &
 server_pid=$!
-node "$base_dir/tests/E2E/https-reverse-proxy.js" "$backend_port" "$public_port" "$certificate_path" "$key_path" >"$base_dir/output/playwright/public-proxy.log" 2>&1 &
+node "$base_dir/tests/E2E/https-reverse-proxy.js" "$backend_port" "$public_port" "$certificate_path" "$key_path" "$canonical_url" "$base_url" >"$base_dir/output/playwright/public-proxy.log" 2>&1 &
 proxy_pids+=("$!")
 node "$base_dir/tests/E2E/https-reverse-proxy.js" "$backend_port" "$callback_port" "$certificate_path" "$key_path" >"$base_dir/output/playwright/callback-proxy.log" 2>&1 &
 proxy_pids+=("$!")
+node "$base_dir/tests/E2E/https-reverse-proxy.js" "$backend_port" "$private_port" "$certificate_path" "$key_path" >"$base_dir/output/playwright/private-proxy.log" 2>&1 &
+proxy_pids+=("$!")
 for _attempt in $(seq 1 30); do
-	if curl -kfsS "$base_url" >/dev/null && curl -kfsS "$split_callback_base_url" >/dev/null; then
+	if curl -kfsS "$base_url" >/dev/null && curl -kfsS "$split_callback_base_url" >/dev/null && curl -kfsS "$canonical_url" >/dev/null; then
 		break
 	fi
 	sleep 1
 done
 curl -kfsS "$base_url" >/dev/null
 curl -kfsS "$split_callback_base_url" >/dev/null
+curl -kfsS "$canonical_url" >/dev/null
 
 pushd "$base_dir/output/playwright" >/dev/null
-"${playwright_cli[@]}" open "$base_url/?paykassa_e2e_product=$product_id" --config "$base_dir/tests/E2E/playwright-cli.json"
+"${playwright_cli[@]}" open "$base_url/?paykassa_e2e_product=$product_id&paykassa_e2e_unauthorized_order=$unauthorized_order_id" --config "$base_dir/tests/E2E/playwright-cli.json"
 "${playwright_cli[@]}" run-code --filename "$base_dir/tests/E2E/browser-smoke.js"
 "${playwright_cli[@]}" console error
 popd >/dev/null

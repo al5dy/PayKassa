@@ -2,12 +2,12 @@ const fs = require( 'node:fs' );
 const http = require( 'node:http' );
 const https = require( 'node:https' );
 
-const [ backendPortValue, listenPortValue, certificatePath, keyPath ] = process.argv.slice( 2 );
+const [ backendPortValue, listenPortValue, certificatePath, keyPath, rewriteFrom = '', rewriteTo = '' ] = process.argv.slice( 2 );
 const backendPort = Number.parseInt( backendPortValue || '', 10 );
 const listenPort = Number.parseInt( listenPortValue || '', 10 );
 
 if ( ! Number.isInteger( backendPort ) || ! Number.isInteger( listenPort ) || ! certificatePath || ! keyPath ) {
-	throw new Error( 'Usage: node https-reverse-proxy.js <backend-port> <listen-port> <certificate> <key>' );
+	throw new Error( 'Usage: node https-reverse-proxy.js <backend-port> <listen-port> <certificate> <key> [rewrite-from] [rewrite-to]' );
 }
 
 const server = https.createServer(
@@ -29,8 +29,38 @@ const server = https.createServer(
 				},
 			},
 			upstream => {
-				response.writeHead( upstream.statusCode || 502, upstream.headers );
-				upstream.pipe( response );
+				const headers = { ...upstream.headers };
+				const isPayKassaBrowserReturn = /[?&]wc-api=wc_gateway_paykassa_(?:return|cancel)(?:&|$)/.test( request.url || '' );
+				if (
+					rewriteFrom &&
+					rewriteTo &&
+					! isPayKassaBrowserReturn &&
+					typeof headers.location === 'string'
+				) {
+					headers.location = headers.location.split( rewriteFrom ).join( rewriteTo );
+				}
+				const contentType = String( upstream.headers[ 'content-type' ] || '' ).toLowerCase();
+				const contentEncoding = String( upstream.headers[ 'content-encoding' ] || '' ).toLowerCase();
+				const rewriteBody = !! rewriteFrom && !! rewriteTo && ! contentEncoding && (
+					contentType.startsWith( 'text/' ) ||
+					contentType.includes( 'json' ) ||
+					contentType.includes( 'javascript' ) ||
+					contentType.includes( 'xml' )
+				);
+				if ( ! rewriteBody ) {
+					response.writeHead( upstream.statusCode || 502, headers );
+					upstream.pipe( response );
+					return;
+				}
+
+				const chunks = [];
+				upstream.on( 'data', chunk => chunks.push( chunk ) );
+				upstream.on( 'end', () => {
+					const body = Buffer.concat( chunks ).toString( 'utf8' ).split( rewriteFrom ).join( rewriteTo );
+					delete headers[ 'content-length' ];
+					response.writeHead( upstream.statusCode || 502, headers );
+					response.end( body );
+				} );
 			}
 		);
 		forwarded.on( 'error', () => {

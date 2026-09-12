@@ -2,7 +2,9 @@ async page => {
 	const initialUrl = page.url();
 	const baseUrl = initialUrl.replace( /\/\?.*$/, '' );
 	const productMatch = initialUrl.match( /[?&]paykassa_e2e_product=(\d+)/ );
+	const unauthorizedOrderMatch = initialUrl.match( /[?&]paykassa_e2e_unauthorized_order=(\d+)/ );
 	const productId = productMatch ? productMatch[ 1 ] : '';
+	const unauthorizedOrderId = unauthorizedOrderMatch ? unauthorizedOrderMatch[ 1 ] : '';
 	const consoleErrors = [];
 	page.on( 'console', message => {
 		if ( message.type() === 'error' && message.location().url.startsWith( baseUrl || '' ) ) {
@@ -10,8 +12,8 @@ async page => {
 		}
 	} );
 
-	if ( ! baseUrl || ! productId ) {
-		throw new Error( 'The initial browser URL must contain paykassa_e2e_product.' );
+	if ( ! baseUrl || ! productId || ! unauthorizedOrderId ) {
+		throw new Error( 'The initial browser URL must contain PayKassa product and unauthorized-order fixtures.' );
 	}
 
 	const assert = ( condition, message ) => {
@@ -19,12 +21,26 @@ async page => {
 			throw new Error( message );
 		}
 	};
+	const originOf = url => {
+		const match = String( url ).match( /^(https?):\/\/([^/]+)/i );
+		return match ? `${ match[ 1 ].toLowerCase() }://${ match[ 2 ].toLowerCase() }` : '';
+	};
+	const queryValue = ( url, name ) => {
+		const match = String( url ).match( new RegExp( `[?&]${ name }=([^&#]*)` ) );
+		return match ? match[ 1 ] : '';
+	};
 	const readMerchantUrls = async () => {
 		const response = await page.request.get( `${ baseUrl }/?paykassa_browser_merchant_urls=1` );
 		assert( response.status() === 200, 'The disposable site must expose its test-only generated Merchant URLs.' );
 		return response.json();
 	};
 	let merchantUrls = await readMerchantUrls();
+	const canonicalHomeUrl = String( merchantUrls.canonical_home_url_reversed || '' ).split( '' ).reverse().join( '' );
+	assert(
+		canonicalHomeUrl.startsWith( 'https://127.0.0.1:' ) &&
+			originOf( canonicalHomeUrl ) !== originOf( baseUrl ),
+		`The browser smoke must use a private canonical WordPress origin distinct from the public checkout origin (canonical=${ canonicalHomeUrl }, public=${ baseUrl }).`
+	);
 	assert(
 		merchantUrls.callback_source === 'external_override' && merchantUrls.browser_return_source === 'external_override',
 		'Same-origin fixture must explicitly configure both independent public base overrides.'
@@ -76,6 +92,13 @@ async page => {
 		await button.click();
 		await page.waitForURL( /https:\/\/paykassa\.app\/browser-smoke\?/, { timeout: 30000 } );
 	};
+	const returnRedirect = async ( endpointUrl, orderId ) => {
+		const response = await page.request.get( `${ endpointUrl }&order_id=${ orderId }`, { maxRedirects: 0 } );
+		const location = response.headers().location || '';
+		assert( response.status() === 302, 'Browser return must respond with a redirect.' );
+		assert( originOf( location ) === originOf( baseUrl ), 'Final WooCommerce destination must remain on the configured public browser origin.' );
+		return location;
+	};
 
 	await addProduct();
 	await page.goto( `${ baseUrl }/classic-checkout/`, { waitUntil: 'networkidle' } );
@@ -97,8 +120,13 @@ async page => {
 		`browser-transaction-confirmed-${ classicOrderId }-0123456789abcdef`,
 		{ currency: 'UNTRUSTED', system: 'UNTRUSTED' }
 	);
-	await page.goto( `${ merchantUrls.success_return_url }&order_id=${ classicOrderId }`, { waitUntil: 'networkidle' } );
+	const classicReturnLocation = await returnRedirect( merchantUrls.success_return_url, classicOrderId );
+	const classicOrderKey = queryValue( classicReturnLocation, 'key' );
+	assert( !! classicOrderKey, 'Mapped thank-you redirect must preserve the WooCommerce order key.' );
+	await page.goto( classicReturnLocation, { waitUntil: 'networkidle' } );
 	assert( page.url().includes( `/order-received/${ classicOrderId }/` ), 'Classic success return must reach the native order-received URL.' );
+	assert( originOf( page.url() ) === originOf( baseUrl ), 'Classic thank-you page must stay on the public checkout origin.' );
+	assert( queryValue( page.url(), 'key' ) === classicOrderKey, 'Classic thank-you navigation must preserve the mapped order key exactly.' );
 	assert( await page.getByRole( 'heading', { name: 'Order received' } ).isVisible(), 'Classic success return must render the WooCommerce thank-you page.' );
 
 	const originSwitch = await page.request.post( `${ baseUrl }/?paykassa_browser_url_scenario=split`, {
@@ -108,8 +136,8 @@ async page => {
 	assert( originSwitch.status() === 204, 'The disposable site must switch to its split callback/browser-origin fixture.' );
 	merchantUrls = await readMerchantUrls();
 	assert(
-		merchantUrls.callback_source === 'external_override' && merchantUrls.browser_return_source === 'wordpress_home',
-		'Split-origin fixture must configure only the callback override and independently default browser returns.'
+		merchantUrls.callback_source === 'external_override' && merchantUrls.browser_return_source === 'external_override',
+		'Split callback fixture must retain the explicit public browser-return origin.'
 	);
 	assert(
 		merchantUrls.invoice_notification_url.startsWith( 'https://127.0.0.1:' ) &&
@@ -119,7 +147,7 @@ async page => {
 	assert(
 		merchantUrls.success_return_url === `${ baseUrl }/?wc-api=wc_gateway_paykassa_return` &&
 			merchantUrls.failure_return_url === `${ baseUrl }/?wc-api=wc_gateway_paykassa_cancel`,
-		'Split-origin configuration must default browser returns independently to the canonical checkout origin.'
+		'Split callback configuration must keep browser returns on the independent public checkout origin.'
 	);
 	assert(
 		! merchantUrls.invoice_notification_url.startsWith( `${ baseUrl }/` ),
@@ -140,8 +168,13 @@ async page => {
 
 	await postNotification( merchantUrls.transaction_notification_url, blocksOrderId, `browser-transaction-confirmed-${ blocksOrderId }-0123456789abcdef` );
 	await postNotification( merchantUrls.invoice_notification_url, blocksOrderId, `browser-invoice-${ blocksOrderId }-0123456789abcdef` );
-	await page.goto( `${ merchantUrls.success_return_url }&order_id=${ blocksOrderId }`, { waitUntil: 'networkidle' } );
+	const blocksReturnLocation = await returnRedirect( merchantUrls.success_return_url, blocksOrderId );
+	const blocksOrderKey = queryValue( blocksReturnLocation, 'key' );
+	assert( !! blocksOrderKey, 'Blocks thank-you redirect must preserve the WooCommerce order key.' );
+	await page.goto( blocksReturnLocation, { waitUntil: 'networkidle' } );
 	assert( page.url().includes( `/order-received/${ blocksOrderId }/` ), 'Blocks success return must reach the native order-received URL.' );
+	assert( originOf( page.url() ) === originOf( baseUrl ), 'Blocks thank-you page must stay on the public checkout origin.' );
+	assert( queryValue( page.url(), 'key' ) === blocksOrderKey, 'Blocks thank-you navigation must preserve the mapped order key exactly.' );
 	assert( await page.getByRole( 'heading', { name: 'Order received' } ).isVisible(), 'Blocks success return must render the WooCommerce thank-you page.' );
 
 	await addProduct();
@@ -150,8 +183,15 @@ async page => {
 	await waitForHostedRedirect( page.getByRole( 'button', { name: 'Place Order' } ) );
 	const failedOrderId = orderIdFromHostedUrl();
 	await postNotification( merchantUrls.transaction_notification_url, failedOrderId, `browser-transaction-pending-${ failedOrderId }-0123456789abcdef` );
-	await page.goto( `${ merchantUrls.failure_return_url }&order_id=${ failedOrderId }`, { waitUntil: 'networkidle' } );
+	const failureReturnLocation = await returnRedirect( merchantUrls.failure_return_url, failedOrderId );
+	const failureOrderKey = queryValue( failureReturnLocation, 'key' );
+	assert( !! failureOrderKey, 'Mapped retry redirect must preserve the WooCommerce order key.' );
+	assert( queryValue( failureReturnLocation, 'pay_for_order' ) === 'true', 'Mapped retry redirect must preserve pay_for_order=true.' );
+	await page.goto( failureReturnLocation, { waitUntil: 'networkidle' } );
 	assert( page.url().includes( `/blocks-checkout/order-pay/${ failedOrderId }/` ), 'Failure return must reach the native retry-payment URL.' );
+	assert( originOf( page.url() ) === originOf( baseUrl ), 'Retry page must stay on the public checkout origin.' );
+	assert( queryValue( page.url(), 'key' ) === failureOrderKey, 'Retry navigation must preserve the mapped order key exactly.' );
+	assert( queryValue( page.url(), 'pay_for_order' ) === 'true', 'Retry navigation must preserve pay_for_order=true.' );
 	assert( await page.getByText( 'The PayKassa payment was not completed.' ).isVisible(), 'Failure return must show a generic retry notice.' );
 	assert( await page.getByRole( 'button', { name: 'Pay for order' } ).isVisible(), 'Failure return must leave the unpaid order retryable.' );
 
@@ -160,12 +200,17 @@ async page => {
 	const transactionMissingHash = await page.request.post( merchantUrls.transaction_notification_url, { form: {}, maxRedirects: 0 } );
 	const returnPost = await page.request.post( `${ merchantUrls.success_return_url }&order_id=${ failedOrderId }`, { form: {}, maxRedirects: 0 } );
 	const unknownReturn = await page.request.get( `${ merchantUrls.success_return_url }&order_id=999999999`, { maxRedirects: 0 } );
+	const unauthorizedReturn = await page.request.get( `${ merchantUrls.success_return_url }&order_id=${ unauthorizedOrderId }`, { maxRedirects: 0 } );
 	assert( invoiceGet.status() === 405, 'Invoice notification must be POST-only.' );
 	assert( invoiceMissingHash.status() === 400, 'Invoice notification without private_hash must fail closed.' );
 	assert( transactionMissingHash.status() === 400, 'Transaction notification without private_hash must fail closed.' );
 	assert( returnPost.status() === 405, 'Browser return must be GET-only.' );
 	assert( unknownReturn.status() === 302, 'Unknown browser return must use a safe generic redirect.' );
 	assert( ! ( unknownReturn.headers().location || '' ).includes( '999999999' ), 'Unknown browser return must not disclose an order-specific URL.' );
+	assert( unauthorizedReturn.status() === 302, 'Unauthorized existing order must use a safe generic redirect.' );
+	assert( originOf( unauthorizedReturn.headers().location || '' ) === originOf( baseUrl ), 'Unauthorized fallback must remain on the safe public browser origin.' );
+	assert( ! ( unauthorizedReturn.headers().location || '' ).includes( unauthorizedOrderId ), 'Unauthorized fallback must not disclose the existing order ID.' );
+	assert( queryValue( unauthorizedReturn.headers().location || '', 'key' ) === '', 'Unauthorized fallback must not leak the existing order key.' );
 
 	assert( consoleErrors.length === 0, 'Store-owned pages must have no browser console errors.' );
 
@@ -177,5 +222,8 @@ async page => {
 		transactionFirstThenInvoice: true,
 		samePublicOriginSessionPreserved: true,
 		splitOriginSessionPreserved: true,
+		privateCanonicalToPublicDestinationMapped: true,
+		orderKeysPreserved: true,
+		unauthorizedOrderKeyProtected: true,
 	};
 }

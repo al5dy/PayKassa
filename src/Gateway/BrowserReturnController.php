@@ -9,10 +9,14 @@ use Al5dy\PayKassaWoo\Infrastructure\Logger;
 /** Browser-only UX redirects. This controller never verifies or settles money. */
 final class BrowserReturnController
 {
+    private readonly BrowserDestinationUrlMapper $destinations;
+
     public function __construct(
         private readonly BrowserReturnAccess $access = new BrowserReturnAccess(),
-        private readonly Logger $logger = new Logger()
+        private readonly Logger $logger = new Logger(),
+        ?BrowserDestinationUrlMapper $destinations = null
     ) {
+        $this->destinations = $destinations ?? BrowserDestinationUrlMapper::from_current_settings();
     }
 
     public function success(): void
@@ -32,7 +36,7 @@ final class BrowserReturnController
         if (! $order instanceof \WC_Order || ! $this->access->is_authorized($order)) {
             return array(
                 'authorized' => false,
-                'url' => $this->fallback_url(),
+                'url' => $this->destinations->map($this->fallback_url(), 'browser_return_denied'),
                 'event' => 'browser_return_denied',
                 'notice' => __('We could not verify access to that order. Sign in or return to checkout to continue.', 'paykassa'),
                 'notice_type' => 'error',
@@ -41,7 +45,7 @@ final class BrowserReturnController
         if ('failure' === $kind && ! $order->is_paid()) {
             return array(
                 'authorized' => true,
-                'url' => $order->get_checkout_payment_url(),
+                'url' => $this->destinations->map($order->get_checkout_payment_url(), 'browser_cancel'),
                 'event' => 'browser_cancel',
                 'notice' => __('The PayKassa payment was not completed. You can try again or choose another payment method.', 'paykassa'),
                 'notice_type' => 'notice',
@@ -50,7 +54,7 @@ final class BrowserReturnController
         if ('success' === $kind && ! $order->is_paid()) {
             return array(
                 'authorized' => true,
-                'url' => $order->get_checkout_order_received_url(),
+                'url' => $this->destinations->map($order->get_checkout_order_received_url(), 'browser_return_pending'),
                 'event' => 'browser_return_pending',
                 'notice' => __('Your cryptocurrency payment is being confirmed. The order status will update automatically.', 'paykassa'),
                 'notice_type' => 'notice',
@@ -58,7 +62,7 @@ final class BrowserReturnController
         }
         return array(
             'authorized' => true,
-            'url' => $order->get_checkout_order_received_url(),
+            'url' => $this->destinations->map($order->get_checkout_order_received_url(), 'browser_return_success'),
             'event' => 'browser_return_success',
             'notice' => '',
             'notice_type' => 'notice',
@@ -86,7 +90,9 @@ final class BrowserReturnController
             false === $order_id ? array() : array('order_id' => (int) $order_id)
         );
         nocache_headers();
-        wp_safe_redirect($destination['url']);
+        if (! $this->destinations->safe_redirect($destination['url'])) {
+            status_header(500);
+        }
         exit;
     }
 
