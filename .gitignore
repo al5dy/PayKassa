@@ -61,3 +61,4 @@ Thumbs.db
 # Internal docs — если ты действительно не хочешь их публиковать
 /docs/
 *.md
+!README.md
