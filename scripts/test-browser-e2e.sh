@@ -93,10 +93,16 @@ cart_id=$("${wp_cli[@]}" post create --post_type=page --post_title='PayKassa Car
 classic_checkout_id=$("${wp_cli[@]}" post create --post_type=page --post_title='Classic Checkout' --post_name=classic-checkout --post_content='[woocommerce_checkout]' --post_status=publish --porcelain)
 blocks_checkout_id=$("${wp_cli[@]}" post create --post_type=page --post_title='Blocks Checkout' --post_name=blocks-checkout --post_content='placeholder' --post_status=publish --porcelain)
 account_id=$("${wp_cli[@]}" post create --post_type=page --post_title='PayKassa Account' --post_name=paykassa-account --post_content='[woocommerce_my_account]' --post_status=publish --porcelain)
+custom_success_id=$("${wp_cli[@]}" post create --post_type=page --post_title='Payment Success' --post_name=payment-success --post_content='Custom PayKassa success destination.' --post_status=publish --porcelain)
+custom_pending_id=$("${wp_cli[@]}" post create --post_type=page --post_title='Payment Pending' --post_name=payment-pending --post_content='Custom PayKassa pending destination.' --post_status=publish --porcelain)
+custom_failure_id=$("${wp_cli[@]}" post create --post_type=page --post_title='Payment Failed' --post_name=payment-failed --post_content='Custom PayKassa failure destination.' --post_status=publish --porcelain)
 PAYKASSA_BLOCKS_PAGE_ID="$blocks_checkout_id" "${wp_cli[@]}" eval '$method = new ReflectionMethod("WC_Install", "get_checkout_block_content"); $method->setAccessible(true); wp_update_post(array("ID" => (int) getenv("PAYKASSA_BLOCKS_PAGE_ID"), "post_content" => $method->invoke(null)));' --skip-themes
 "${wp_cli[@]}" option update woocommerce_cart_page_id "$cart_id"
 "${wp_cli[@]}" option update woocommerce_checkout_page_id "$classic_checkout_id"
 "${wp_cli[@]}" option update paykassa_browser_blocks_checkout_id "$blocks_checkout_id"
+"${wp_cli[@]}" option update paykassa_browser_custom_success_id "$custom_success_id"
+"${wp_cli[@]}" option update paykassa_browser_custom_pending_id "$custom_pending_id"
+"${wp_cli[@]}" option update paykassa_browser_custom_failure_id "$custom_failure_id"
 "${wp_cli[@]}" option update woocommerce_myaccount_page_id "$account_id"
 "${wp_cli[@]}" option update woocommerce_currency USD
 "${wp_cli[@]}" option update woocommerce_default_country US:CA
@@ -144,4 +150,4 @@ if [[ -n "$PAYKASSA_FAILED_ORDER_ID" ]]; then
 	PAYKASSA_FAILED_ORDER_ID="$PAYKASSA_FAILED_ORDER_ID" "${wp_cli[@]}" eval '$order = wc_get_order((int) getenv("PAYKASSA_FAILED_ORDER_ID")); if (! $order instanceof WC_Order || $order->is_paid() || "on-hold" !== $order->get_status() || "manual_review" !== $order->get_meta(\Al5dy\PayKassaWoo\Order\OrderMeta::STATE, true)) { throw new RuntimeException("Verified mismatch did not remain unpaid in durable manual review."); }'
 fi
 
-printf 'PayKassa browser E2E passed: same-public-origin and split-origin URL configurations, guest session returns, Classic Checkout, Blocks Checkout, exact IPN ACKs, success return, failure retry, and durable mismatch acknowledgement.\n'
+printf 'PayKassa browser E2E passed: same/split public origins, guest sessions, native and custom return pages, Classic/Blocks Checkout, exact IPN ACKs, failure retry, and durable mismatch acknowledgement.\n'

@@ -108,7 +108,6 @@ final class DiagnosticsPage
             echo '<tr><th>' . esc_html($label) . '</th><td>' . esc_html((string) $value) . '</td></tr>';
         }
         echo '</tbody></table>';
-        $this->render_merchant_urls($endpoint_urls);
         echo '<h2>' . esc_html__('Endpoint diagnostics', 'paykassa') . '</h2><table class="widefat striped"><tbody>';
         foreach ($this->endpoint_registration() as $label => $registered) {
             echo '<tr><th>' . esc_html($label) . '</th><td>' . esc_html($registered ? __('Registered', 'paykassa') : __('Not registered', 'paykassa')) . '</td></tr>';
@@ -118,41 +117,6 @@ final class DiagnosticsPage
         wp_nonce_field('paykassa_test_connection');
         submit_button(__('Test API connection', 'paykassa'), 'secondary', 'submit', false);
         echo '</form></div>';
-    }
-
-    private function render_merchant_urls(MerchantEndpointUrls $urls): void
-    {
-        $rows = array(
-            __('URL of Invoice Payment Notifications', 'paykassa') => array(
-                $urls->invoice_notification_url(),
-                __('Required. Server-to-server payment verification using sci_confirm_order.', 'paykassa'),
-            ),
-            __('URL of successful payment', 'paykassa') => array(
-                $urls->success_return_url(),
-                __('Browser redirect only. Never used as payment evidence.', 'paykassa'),
-            ),
-            __('URL malfunction when paying', 'paykassa') => array(
-                $urls->failure_return_url(),
-                __('Browser redirect only. Does not cancel or settle an order.', 'paykassa'),
-            ),
-            __('URL of Cryptocurrency Transaction Processor', 'paykassa') => array(
-                $urls->transaction_notification_url(),
-                __('Optional secondary verified transaction notification channel using sci_confirm_transaction_notification. Live only.', 'paykassa'),
-            ),
-        );
-        echo '<h2>' . esc_html__('PayKassa Merchant URLs', 'paykassa') . '</h2>';
-        echo '<p>' . esc_html__('Copy each URL into the matching field in PayKassa Merchant settings. Callback and browser-return bases are configured independently. The browser-return base must match the public origin where customers perform checkout so login and WooCommerce session cookies remain available. The plugin does not access or modify your PayKassa account.', 'paykassa') . '</p>';
-        echo '<table class="widefat striped"><tbody>';
-        $index = 0;
-        foreach ($rows as $label => $row) {
-            ++$index;
-            $id = 'paykassa-merchant-url-' . $index;
-            echo '<tr><th><label for="' . esc_attr($id) . '">' . esc_html($label) . '</label><p class="description">' . esc_html($row[1]) . '</p></th><td>';
-            echo '<input type="text" readonly class="large-text code" id="' . esc_attr($id) . '" value="' . esc_attr($row[0]) . '"> ';
-            echo '<button type="button" class="button paykassa-copy-url" data-copy-target="' . esc_attr($id) . '">' . esc_html__('Copy', 'paykassa') . '</button></td></tr>';
-        }
-        echo '</tbody></table><p id="paykassa-copy-status" class="screen-reader-text" aria-live="polite"></p>';
-        echo '<script>(function(){var status=document.getElementById("paykassa-copy-status");function copied(){status.textContent="' . esc_js(__('URL copied.', 'paykassa')) . '";}function fallback(input){input.focus();input.select();try{if(document.execCommand("copy")){copied();}}catch(error){status.textContent="' . esc_js(__('Select and copy the URL manually.', 'paykassa')) . '";}}document.querySelectorAll(".paykassa-copy-url").forEach(function(button){button.addEventListener("click",function(){var input=document.getElementById(button.getAttribute("data-copy-target"));if(!input){return;}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(input.value).then(copied,function(){fallback(input);});}else{fallback(input);}});});})();</script>';
     }
 
     /** @return array<string, bool> */

@@ -55,6 +55,32 @@ final class PayKassaGateway extends \WC_Payment_Gateway
             'reconciliation_backfill_days' => array('title' => __('Initial recovery lookback (days)', 'paykassa'), 'type' => 'select', 'options' => array('7' => '7', '30' => '30', '90' => '90', '365' => '365'), 'default' => '30', 'description' => __('Later runs resume saved progress, including after a long outage. History records without an SCI verification token require review; they are never credited from history alone.', 'paykassa')),
             'debug' => array( 'title' => __('Debug logging', 'paykassa'), 'type' => 'checkbox', 'label' => __('Write redacted diagnostic logs', 'paykassa'), 'default' => 'no' ),
             'delete_data_on_uninstall' => array( 'title' => __('Uninstall cleanup', 'paykassa'), 'type' => 'checkbox', 'label' => __('Delete plugin settings and webhook audit data on uninstall', 'paykassa'), 'default' => 'no' ),
+            'customer_return_pages' => array(
+                'title' => __('Customer return pages', 'paykassa'),
+                'type' => 'title',
+                'description' => __('These settings affect browser UX only. They never verify, settle, cancel, or otherwise change a payment.', 'paykassa'),
+            ),
+            BrowserReturnDestinationResolver::SUCCESS_PAGE_SETTING => array(
+                'title' => __('After successful payment', 'paykassa'),
+                'type' => 'paykassa_page_select',
+                'default' => '0',
+                'native_label' => __('Default — Native WooCommerce thank-you page', 'paykassa'),
+                'description' => __('Selecting a custom page bypasses the native WooCommerce order-received page and its thank-you hooks. Leave this at Default unless you intentionally use a custom post-payment page.', 'paykassa'),
+            ),
+            BrowserReturnDestinationResolver::PENDING_PAGE_SETTING => array(
+                'title' => __('While payment is being confirmed', 'paykassa'),
+                'type' => 'paykassa_page_select',
+                'default' => '0',
+                'native_label' => __('Default — Native WooCommerce order page', 'paykassa'),
+                'description' => __('Used only when the customer returns before the verified server notification has completed the order.', 'paykassa'),
+            ),
+            BrowserReturnDestinationResolver::FAILURE_PAGE_SETTING => array(
+                'title' => __('After failed / cancelled payment', 'paykassa'),
+                'type' => 'paykassa_page_select',
+                'default' => '0',
+                'native_label' => __('Default — Native WooCommerce retry-payment page', 'paykassa'),
+                'description' => __('Used only for an unpaid order. If the order is already paid, PayKassa always uses the successful-payment destination.', 'paykassa'),
+            ),
         );
     }
 
@@ -84,6 +110,20 @@ final class PayKassaGateway extends \WC_Payment_Gateway
                     throw new \InvalidArgumentException('PayKassa minimum-payment rules must be text.');
                 }
                 $_POST[$minimums_field] = (new MinimumPaymentPolicy())->normalize_rules($minimums);
+            }
+            foreach (
+                array(
+                    BrowserReturnDestinationResolver::SUCCESS_PAGE_SETTING,
+                    BrowserReturnDestinationResolver::PENDING_PAGE_SETTING,
+                    BrowserReturnDestinationResolver::FAILURE_PAGE_SETTING,
+                ) as $page_setting
+            ) {
+                $page_field = $this->plugin_id . $this->id . '_' . $page_setting;
+                if (isset($_POST[$page_field])) {
+                    $_POST[$page_field] = BrowserReturnDestinationResolver::normalize_configured_page_id(
+                        wp_unslash($_POST[$page_field])
+                    );
+                }
             }
         } catch (\InvalidArgumentException $exception) {
             \WC_Admin_Settings::add_error($exception->getMessage());
@@ -137,6 +177,35 @@ final class PayKassaGateway extends \WC_Payment_Gateway
         return $saved;
     }
 
+    /** Render published WordPress pages while keeping the native behavior as the safe default. */
+    public function generate_paykassa_page_select_html($key, $data): string
+    {
+        $native_label = is_array($data) && is_string($data['native_label'] ?? null)
+            ? $data['native_label']
+            : __('Default — Native WooCommerce behavior', 'paykassa');
+        $data = is_array($data) ? $data : array();
+        $data['type'] = 'select';
+        $data['class'] = trim((string) ($data['class'] ?? '') . ' wc-enhanced-select');
+        $data['css'] = (string) ($data['css'] ?? 'min-width: 420px;');
+        $data['options'] = array('0' => $native_label) + BrowserReturnDestinationResolver::published_page_options();
+        return $this->generate_select_html($key, $data);
+    }
+
+    /**
+     * Keep the Merchant URL table out of stored settings while rendering it last.
+     *
+     * @param array<string, array<string, mixed>> $form_fields
+     */
+    public function generate_settings_html($form_fields = array(), $echo = true): string
+    {
+        $generated = parent::generate_settings_html($form_fields, false);
+        $html = (is_string($generated) ? $generated : '') . $this->merchant_urls_html();
+        if ($echo) {
+            echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Each value is escaped by the two renderers.
+        }
+        return $html;
+    }
+
     /** Render an empty secret field and a masked summary when a value is configured. */
     public function generate_paykassa_secret_html($key, $data): string
     {
@@ -159,6 +228,70 @@ final class PayKassaGateway extends \WC_Payment_Gateway
                         <button type="submit" class="button button-secondary" name="save" value="<?php echo esc_attr($reset_action); ?>"><?php echo esc_html__('Reset value', 'paykassa'); ?></button>
                     </p>
                 <?php endif; ?>
+            </td>
+        </tr>
+        <?php
+        return (string) ob_get_clean();
+    }
+
+    private function merchant_urls_html(): string
+    {
+        $settings = get_option($this->get_option_key(), array());
+        $settings = is_array($settings) ? $settings : array();
+        $live_mode = 'yes' !== ($settings['testmode'] ?? 'no');
+        foreach (array('external_base_url', 'browser_return_base_url') as $base_key) {
+            $value = $settings[$base_key] ?? '';
+            if (! is_string($value) || '' === trim($value)) {
+                $settings[$base_key] = '';
+                continue;
+            }
+            try {
+                $settings[$base_key] = MerchantEndpointUrls::normalize_external_base_url($value, $live_mode);
+            } catch (\InvalidArgumentException) {
+                $settings[$base_key] = '';
+            }
+        }
+        $urls = new MerchantEndpointUrls($settings);
+        $rows = array(
+            __('URL of Invoice Payment Notifications', 'paykassa') => array(
+                $urls->invoice_notification_url(),
+                __('Required. Server-to-server payment verification using sci_confirm_order.', 'paykassa'),
+            ),
+            __('URL of successful payment', 'paykassa') => array(
+                $urls->success_return_url(),
+                __('Browser redirect only. Never used as payment evidence.', 'paykassa'),
+            ),
+            __('URL malfunction when paying', 'paykassa') => array(
+                $urls->failure_return_url(),
+                __('Browser redirect only. Does not cancel or settle an order.', 'paykassa'),
+            ),
+            __('URL of Cryptocurrency Transaction Processor', 'paykassa') => array(
+                $urls->transaction_notification_url(),
+                __('Optional secondary verified transaction notification channel using sci_confirm_transaction_notification. Live only.', 'paykassa'),
+            ),
+        );
+
+        ob_start();
+        ?>
+        <tr valign="top">
+            <th scope="row" class="titledesc"><?php echo esc_html__('PayKassa Merchant URLs', 'paykassa'); ?></th>
+            <td class="forminp">
+                <p class="description"><?php echo esc_html__('Copy each URL into the matching field in PayKassa Merchant settings. Callback and browser-return bases are independent; the plugin never accesses your PayKassa account.', 'paykassa'); ?></p>
+                <table class="widefat striped paykassa-merchant-urls"><tbody>
+                    <?php $index = 0; ?>
+                    <?php foreach ($rows as $label => $row) : ?>
+                        <?php
+                        ++$index;
+                        $id = 'paykassa-merchant-url-' . $index;
+                        ?>
+                        <tr>
+                            <th><label for="<?php echo esc_attr($id); ?>"><?php echo esc_html($label); ?></label><p class="description"><?php echo esc_html($row[1]); ?></p></th>
+                            <td><input type="text" readonly class="large-text code" id="<?php echo esc_attr($id); ?>" value="<?php echo esc_attr($row[0]); ?>"> <button type="button" class="button paykassa-copy-url" data-copy-target="<?php echo esc_attr($id); ?>"><?php echo esc_html__('Copy', 'paykassa'); ?></button></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody></table>
+                <p id="paykassa-copy-status" class="screen-reader-text" aria-live="polite"></p>
+                <script>(function(){var status=document.getElementById("paykassa-copy-status");function copied(){status.textContent="<?php echo esc_js(__('URL copied.', 'paykassa')); ?>";}function fallback(input){input.focus();input.select();try{if(document.execCommand("copy")){copied();}}catch(error){status.textContent="<?php echo esc_js(__('Select and copy the URL manually.', 'paykassa')); ?>";}}document.querySelectorAll(".paykassa-copy-url").forEach(function(button){button.addEventListener("click",function(){var input=document.getElementById(button.getAttribute("data-copy-target"));if(!input){return;}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(input.value).then(copied,function(){fallback(input);});}else{fallback(input);}});});})();</script>
             </td>
         </tr>
         <?php

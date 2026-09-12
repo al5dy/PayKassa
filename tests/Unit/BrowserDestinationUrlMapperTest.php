@@ -46,7 +46,26 @@ final class BrowserDestinationUrlMapperTest extends TestCase
             'https://public.example/storefront/checkout/order-pay/145/?pay_for_order=true&key=wc_order_123',
             $mapper->map(
                 'https://private.example/wordpress/checkout/order-pay/145/?pay_for_order=true&key=wc_order_123',
-                'browser_cancel'
+                'browser_return_failure'
+            )
+        );
+    }
+
+    public function test_selected_wordpress_page_is_mapped_after_selection_while_native_url_is_preserved(): void
+    {
+        $urls = new MerchantEndpointUrls(
+            array('testmode' => 'no', 'browser_return_base_url' => 'https://public.example/storefront/'),
+            'https://private.example/wordpress/'
+        );
+        $mapper = new BrowserDestinationUrlMapper($urls, 'https://private.example/wordpress/');
+
+        self::assertSame(
+            'https://public.example/storefront/payment-success/?campaign=crypto',
+            $mapper->map(
+                'https://private.example/wordpress/payment-success/?campaign=crypto',
+                'browser_return_success',
+                null,
+                'https://private.example/wordpress/checkout/order-received/145/?key=wc_order_123'
             )
         );
     }

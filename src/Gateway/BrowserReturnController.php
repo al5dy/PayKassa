@@ -10,13 +10,17 @@ use Al5dy\PayKassaWoo\Infrastructure\Logger;
 final class BrowserReturnController
 {
     private readonly BrowserDestinationUrlMapper $destinations;
+    private readonly BrowserReturnDestinationResolver $return_destinations;
 
     public function __construct(
         private readonly BrowserReturnAccess $access = new BrowserReturnAccess(),
         private readonly Logger $logger = new Logger(),
-        ?BrowserDestinationUrlMapper $destinations = null
+        ?BrowserDestinationUrlMapper $destinations = null,
+        ?BrowserReturnDestinationResolver $return_destinations = null
     ) {
         $this->destinations = $destinations ?? BrowserDestinationUrlMapper::from_current_settings();
+        $this->return_destinations = $return_destinations
+            ?? BrowserReturnDestinationResolver::from_current_settings($this->destinations);
     }
 
     public function success(): void
@@ -36,7 +40,7 @@ final class BrowserReturnController
         if (! $order instanceof \WC_Order || ! $this->access->is_authorized($order)) {
             return array(
                 'authorized' => false,
-                'url' => $this->destinations->map($this->fallback_url(), 'browser_return_denied'),
+                'url' => $this->return_destinations->denied($this->fallback_url()),
                 'event' => 'browser_return_denied',
                 'notice' => __('We could not verify access to that order. Sign in or return to checkout to continue.', 'paykassa'),
                 'notice_type' => 'error',
@@ -45,7 +49,11 @@ final class BrowserReturnController
         if ('failure' === $kind && ! $order->is_paid()) {
             return array(
                 'authorized' => true,
-                'url' => $this->destinations->map($order->get_checkout_payment_url(), 'browser_cancel'),
+                'url' => $this->return_destinations->resolve(
+                    $order,
+                    BrowserReturnDestinationResolver::FAILURE_CONTEXT,
+                    $order->get_checkout_payment_url()
+                ),
                 'event' => 'browser_cancel',
                 'notice' => __('The PayKassa payment was not completed. You can try again or choose another payment method.', 'paykassa'),
                 'notice_type' => 'notice',
@@ -54,7 +62,11 @@ final class BrowserReturnController
         if ('success' === $kind && ! $order->is_paid()) {
             return array(
                 'authorized' => true,
-                'url' => $this->destinations->map($order->get_checkout_order_received_url(), 'browser_return_pending'),
+                'url' => $this->return_destinations->resolve(
+                    $order,
+                    BrowserReturnDestinationResolver::PENDING_CONTEXT,
+                    $order->get_checkout_order_received_url()
+                ),
                 'event' => 'browser_return_pending',
                 'notice' => __('Your cryptocurrency payment is being confirmed. The order status will update automatically.', 'paykassa'),
                 'notice_type' => 'notice',
@@ -62,7 +74,11 @@ final class BrowserReturnController
         }
         return array(
             'authorized' => true,
-            'url' => $this->destinations->map($order->get_checkout_order_received_url(), 'browser_return_success'),
+            'url' => $this->return_destinations->resolve(
+                $order,
+                BrowserReturnDestinationResolver::SUCCESS_CONTEXT,
+                $order->get_checkout_order_received_url()
+            ),
             'event' => 'browser_return_success',
             'notice' => '',
             'notice_type' => 'notice',

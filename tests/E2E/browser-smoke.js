@@ -203,6 +203,34 @@ async page => {
 		'Browser failure return must not mutate or settle the awaiting-payment order.'
 	);
 
+	const customPageSwitch = await page.request.post( `${ baseUrl }/?paykassa_browser_return_pages=custom`, {
+		form: { token: 'paykassa-browser-fixture' },
+		maxRedirects: 0,
+	} );
+	assert( customPageSwitch.status() === 204, 'The disposable site must enable published custom return-page settings.' );
+	const customSuccessLocation = await returnRedirect( merchantUrls.success_return_url, classicOrderId );
+	assert( customSuccessLocation === `${ baseUrl }/payment-success/`, 'Paid success must use the configured published success page on the public browser origin.' );
+	const customPendingLocation = await returnRedirect( merchantUrls.success_return_url, failedOrderId );
+	assert( customPendingLocation === `${ baseUrl }/payment-pending/`, 'Unpaid success return must use the configured pending page on the public browser origin.' );
+	const customFailureLocation = await returnRedirect( merchantUrls.failure_return_url, failedOrderId );
+	assert( customFailureLocation === `${ baseUrl }/payment-failed/`, 'Unpaid failure return must use the configured failure page on the public browser origin.' );
+	const paidFailureLocation = await returnRedirect( merchantUrls.failure_return_url, classicOrderId );
+	assert( paidFailureLocation === customSuccessLocation, 'Failure endpoint for a paid order must use the success destination.' );
+	assert(
+		queryValue( customSuccessLocation, 'key' ) === '' && queryValue( customFailureLocation, 'key' ) === '',
+		'Custom public pages must not receive an order key unless a trusted developer filter intentionally retains one.'
+	);
+	await page.goto( customPendingLocation, { waitUntil: 'networkidle' } );
+	assert( await page.getByText( 'Custom PayKassa pending destination.' ).isVisible(), 'Guest session must survive navigation to the mapped custom pending page.' );
+	const customStateResponse = await page.request.get(
+		`${ baseUrl }/?paykassa_browser_order_state=${ failedOrderId }&token=paykassa-browser-fixture`
+	);
+	const customState = await customStateResponse.json();
+	assert(
+		customStateResponse.status() === 200 && customState.paid === false && customState.order_status === 'pending' && customState.payment_state === 'awaiting_payment',
+		'Custom success/pending/failure browser destinations must not mutate financial order state.'
+	);
+
 	await postNotification( merchantUrls.invoice_notification_url, failedOrderId, `browser-invoice-mismatch-${ failedOrderId }-0123456789abcdef` );
 	await postNotification( merchantUrls.invoice_notification_url, failedOrderId, `browser-invoice-mismatch-${ failedOrderId }-0123456789abcdef` );
 	const mismatchStateResponse = await page.request.get(
@@ -242,6 +270,8 @@ async page => {
 		transactionFirstThenInvoice: true,
 		samePublicOriginSessionPreserved: true,
 		splitOriginSessionPreserved: true,
+		customReturnPagesMapped: true,
+		paidFailureUsesSuccessPage: true,
 		privateCanonicalToPublicDestinationMapped: true,
 		orderKeysPreserved: true,
 		unauthorizedOrderKeyProtected: true,

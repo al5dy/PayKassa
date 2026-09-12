@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Al5dy\PayKassaWoo\Gateway\BrowserReturnAccess;
 use Al5dy\PayKassaWoo\Gateway\BrowserReturnController;
 use Al5dy\PayKassaWoo\Gateway\BrowserDestinationUrlMapper;
+use Al5dy\PayKassaWoo\Gateway\BrowserReturnDestinationResolver;
 use Al5dy\PayKassaWoo\Gateway\MerchantEndpointUrls;
 use Al5dy\PayKassaWoo\Gateway\PayKassaGateway;
 use Al5dy\PayKassaWoo\Admin\DiagnosticsPage;
@@ -37,6 +38,7 @@ $original_currency = get_option('woocommerce_currency', 'USD');
 $original_user = get_current_user_id();
 $orders = array();
 $users = array();
+$posts = array();
 $provider_responses = array();
 $provider_requests = array();
 $payment_completions = array();
@@ -231,14 +233,39 @@ try {
     paykassa_endpoint_assert($urls->server_callback_base_url() === $urls->browser_return_base_url(), 'Same-public-origin configuration must be supported explicitly.');
     paykassa_endpoint_assert($split_urls->server_callback_base_url() !== $split_urls->browser_return_base_url(), 'Split callback/browser origin configuration must be supported explicitly.');
     wp_set_current_user(1);
+    $success_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'PayKassa Payment Success', 'post_name' => 'paykassa-payment-success'), true);
+    $pending_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'PayKassa Payment Pending', 'post_name' => 'paykassa-payment-pending'), true);
+    $failure_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'PayKassa Payment Failed', 'post_name' => 'paykassa-payment-failed'), true);
+    $filter_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'PayKassa Filter Override', 'post_name' => 'paykassa-filter-override'), true);
+    $draft_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'draft', 'post_title' => 'PayKassa Draft Destination'), true);
+    $non_page_id = wp_insert_post(array('post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'PayKassa Non-page Destination'), true);
+    $deleted_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'PayKassa Deleted Destination'), true);
+    foreach (array($success_page_id, $pending_page_id, $failure_page_id, $filter_page_id, $draft_page_id, $non_page_id, $deleted_page_id) as $post_id) {
+        paykassa_endpoint_assert(is_int($post_id), 'Return destination fixtures must create WordPress posts.');
+        $posts[] = $post_id;
+    }
+    wp_delete_post((int) $deleted_page_id, true);
+    $posts = array_values(array_diff($posts, array((int) $deleted_page_id)));
+
     ob_start();
     (new DiagnosticsPage())->render();
     $diagnostics = (string) ob_get_clean();
-    paykassa_endpoint_assert(4 === substr_count($diagnostics, 'data-copy-target='), 'Diagnostics must render one Copy button for each of the four Merchant URLs.');
+    paykassa_endpoint_assert(0 === substr_count($diagnostics, 'data-copy-target='), 'Diagnostics must no longer duplicate the Merchant URL table.');
+    $gateway_settings_html = (new PayKassaGateway())->generate_settings_html(array(), false);
+    paykassa_endpoint_assert(4 === substr_count($gateway_settings_html, 'data-copy-target='), 'PayKassa gateway settings must render one Copy button for each Merchant URL.');
     foreach (array('URL of Invoice Payment Notifications', 'URL of successful payment', 'URL malfunction when paying', 'URL of Cryptocurrency Transaction Processor') as $merchant_label) {
-        paykassa_endpoint_assert(str_contains($diagnostics, $merchant_label), 'Diagnostics must show the exact PayKassa Merchant field label: ' . $merchant_label);
+        paykassa_endpoint_assert(str_contains($gateway_settings_html, $merchant_label), 'Gateway settings must show the exact PayKassa Merchant field label: ' . $merchant_label);
     }
-    paykassa_endpoint_assert(! str_contains($diagnostics, 'Legacy callback URL') && str_contains($diagnostics, $urls->transaction_notification_url()), 'Diagnostics must remove the legacy label and show the generated transaction URL.');
+    paykassa_endpoint_assert(
+        ! str_contains($diagnostics, 'PayKassa Merchant URLs')
+        && str_contains($gateway_settings_html, $urls->transaction_notification_url())
+        && strrpos($gateway_settings_html, 'PayKassa Merchant URLs') > strrpos($gateway_settings_html, 'woocommerce_paykassa_failure_return_page_id'),
+        'Merchant URLs must move out of Diagnostics and render at the very bottom of PayKassa gateway settings.'
+    );
+    foreach (array('woocommerce_paykassa_success_return_page_id', 'woocommerce_paykassa_pending_return_page_id', 'woocommerce_paykassa_failure_return_page_id') as $select_id) {
+        paykassa_endpoint_assert(str_contains($gateway_settings_html, 'id="' . $select_id . '"'), 'Gateway settings must render each customer return page selector.');
+    }
+    paykassa_endpoint_assert(str_contains($gateway_settings_html, 'PayKassa Payment Success') && ! str_contains($gateway_settings_html, 'PayKassa Draft Destination') && ! str_contains($gateway_settings_html, 'PayKassa Non-page Destination'), 'Return page selectors must contain published WordPress pages only.');
     paykassa_endpoint_assert(2 === substr_count($diagnostics, 'External override'), 'Diagnostics must report independent external sources for callback and browser return bases.');
     $original_https = $_SERVER['HTTPS'] ?? null;
     $_SERVER['HTTPS'] = 'on';
@@ -337,7 +364,7 @@ try {
         $failure_guest instanceof WC_Order
         && $failure['authorized']
         && 'browser_cancel' === $failure['event']
-        && $destination_mapper->map($failure_guest->get_checkout_payment_url(), 'browser_cancel') === $failure['url']
+        && $destination_mapper->map($failure_guest->get_checkout_payment_url(), BrowserReturnDestinationResolver::FAILURE_CONTEXT) === $failure['url']
         && $failure_before_status === $failure_guest->get_status()
         && ! $failure_guest->is_paid()
         && 0 === ($payment_completions[$failure_guest->get_id()] ?? 0),
@@ -353,25 +380,101 @@ try {
         'Failure return for an already-paid order must use the public order-received destination and never initiate another payment.'
     );
 
+    $custom_return_settings = array_replace(
+        $live_settings,
+        array(
+            BrowserReturnDestinationResolver::SUCCESS_PAGE_SETTING => (string) $success_page_id,
+            BrowserReturnDestinationResolver::PENDING_PAGE_SETTING => (string) $pending_page_id,
+            BrowserReturnDestinationResolver::FAILURE_PAGE_SETTING => (string) $failure_page_id,
+        )
+    );
+    $custom_return_controller = new BrowserReturnController(
+        $return_access,
+        new Logger(),
+        $destination_mapper,
+        new BrowserReturnDestinationResolver($destination_mapper, $custom_return_settings)
+    );
+    $custom_success = $custom_return_controller->destination('success', $registered_paid->get_id());
+    $custom_pending = $custom_return_controller->destination('success', $registered_pending->get_id());
+    $custom_failure = $custom_return_controller->destination('failure', $failure_guest->get_id());
+    $custom_paid_failure = $custom_return_controller->destination('failure', $registered_paid->get_id());
+    $success_permalink = get_permalink((int) $success_page_id);
+    $pending_permalink = get_permalink((int) $pending_page_id);
+    $failure_permalink = get_permalink((int) $failure_page_id);
+    paykassa_endpoint_assert(is_string($success_permalink) && is_string($pending_permalink) && is_string($failure_permalink), 'Published custom return pages must have canonical permalinks.');
+    paykassa_endpoint_assert(
+        $destination_mapper->map($success_permalink, BrowserReturnDestinationResolver::SUCCESS_CONTEXT, $registered_paid, $registered_paid->get_checkout_order_received_url()) === $custom_success['url']
+        && $destination_mapper->map($pending_permalink, BrowserReturnDestinationResolver::PENDING_CONTEXT, $registered_pending, $registered_pending->get_checkout_order_received_url()) === $custom_pending['url']
+        && $destination_mapper->map($failure_permalink, BrowserReturnDestinationResolver::FAILURE_CONTEXT, $failure_guest, $failure_guest->get_checkout_payment_url()) === $custom_failure['url']
+        && str_starts_with($custom_success['url'], $urls->browser_return_base_url()),
+        'Published custom success, pending, and failure pages must map from the canonical permalink onto the public browser origin.'
+    );
+    paykassa_endpoint_assert(
+        $custom_success['url'] === $custom_paid_failure['url'],
+        'A failure endpoint return for an already-paid order must use the configured success destination.'
+    );
+
+    foreach (
+        array(
+            (string) $draft_page_id => 'draft',
+            (string) $non_page_id => 'non-page',
+            (string) $deleted_page_id => 'deleted',
+        ) as $invalid_page_id => $invalid_kind
+    ) {
+        $invalid_settings = array_replace($live_settings, array(BrowserReturnDestinationResolver::SUCCESS_PAGE_SETTING => $invalid_page_id));
+        $invalid_controller = new BrowserReturnController(
+            $return_access,
+            new Logger(),
+            $destination_mapper,
+            new BrowserReturnDestinationResolver($destination_mapper, $invalid_settings)
+        );
+        $invalid_destination = $invalid_controller->destination('success', $registered_paid->get_id());
+        paykassa_endpoint_assert(
+            $destination_mapper->map($registered_paid->get_checkout_order_received_url(), BrowserReturnDestinationResolver::SUCCESS_CONTEXT) === $invalid_destination['url'],
+            'A ' . $invalid_kind . ' configured destination must fall back to native WooCommerce behavior.'
+        );
+    }
+
     $native_received_url = $registered_paid->get_checkout_order_received_url();
     $unfiltered_received_url = $destination_mapper->map($native_received_url, 'browser_return_success');
-    $safe_destination_filter = static fn (string $url): string => add_query_arg('paykassa_return', 'verified', $url);
-    add_filter(BrowserDestinationUrlMapper::DESTINATION_FILTER, $safe_destination_filter);
-    $filtered_received_url = $destination_mapper->map($native_received_url, 'browser_return_success');
-    remove_filter(BrowserDestinationUrlMapper::DESTINATION_FILTER, $safe_destination_filter);
+    $filter_order = null;
+    $filter_selected_url = '';
+    $filter_native_url = '';
+    $filter_context = '';
+    $safe_destination_filter = static function (string $url, string $native_url, string $context, ?WC_Order $order) use (&$filter_order, &$filter_selected_url, &$filter_native_url, &$filter_context, $filter_page_id): string {
+        $filter_order = $order;
+        $filter_selected_url = $url;
+        $filter_native_url = $native_url;
+        $filter_context = $context;
+        $permalink = get_permalink((int) $filter_page_id);
+        return is_string($permalink) ? $permalink : $url;
+    };
+    add_filter(BrowserDestinationUrlMapper::DESTINATION_FILTER, $safe_destination_filter, 10, 4);
+    $filtered_received_url = $custom_return_controller->destination('success', $registered_paid->get_id())['url'];
+    remove_filter(BrowserDestinationUrlMapper::DESTINATION_FILTER, $safe_destination_filter, 10);
     paykassa_endpoint_assert(
         str_starts_with($filtered_received_url, $urls->browser_return_base_url())
-        && str_contains($filtered_received_url, 'paykassa_return=verified')
+        && str_contains($filtered_received_url, 'page_id=' . (string) $filter_page_id)
         && $destination_mapper->is_safe_browser_destination($filtered_received_url),
-        'The browser destination filter may customize only a URL that remains inside the configured public browser base.'
+        'The browser destination filter may override the admin page before canonical-to-public origin mapping.'
+    );
+    paykassa_endpoint_assert(
+        $filter_order instanceof WC_Order
+        && $registered_paid->get_id() === $filter_order->get_id()
+        && $success_permalink === $filter_selected_url
+        && $native_received_url === $filter_native_url
+        && BrowserReturnDestinationResolver::SUCCESS_CONTEXT === $filter_context,
+        'The browser destination filter must receive the authorized WC_Order, immutable native URL, and stable result context.'
     );
     $unsafe_destination_filter = static fn (): string => 'https://provider.example/redirect?key=leak';
     add_filter(BrowserDestinationUrlMapper::DESTINATION_FILTER, $unsafe_destination_filter);
-    $rejected_filtered_url = $destination_mapper->map($native_received_url, 'browser_return_success');
+    $rejected_filtered_url = $custom_return_controller->destination('success', $registered_paid->get_id())['url'];
     remove_filter(BrowserDestinationUrlMapper::DESTINATION_FILTER, $unsafe_destination_filter);
     paykassa_endpoint_assert(
-        $unfiltered_received_url === $rejected_filtered_url && ! str_contains($rejected_filtered_url, 'provider.example'),
-        'An unsafe browser destination filter result must be ignored without permitting an external redirect.'
+        $custom_success['url'] === $rejected_filtered_url
+        && $unfiltered_received_url !== $rejected_filtered_url
+        && ! str_contains($rejected_filtered_url, 'provider.example'),
+        'An unsafe browser destination filter result must fall back to the selected safe page without permitting an external redirect.'
     );
 
     update_option(
@@ -633,6 +736,9 @@ try {
     }
     foreach ($users as $user_id) {
         wp_delete_user($user_id);
+    }
+    foreach ($posts as $post_id) {
+        wp_delete_post($post_id, true);
     }
     if (null === $original_settings) {
         delete_option('woocommerce_paykassa_settings');

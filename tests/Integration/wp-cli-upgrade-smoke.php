@@ -20,15 +20,26 @@ $original_credential_profiles = get_option(SciCredentialStore::OPTION, false);
 $original_settings_migration = get_option(Installer::SETTINGS_MIGRATION_OPTION, false);
 $original_retention_error = get_option(Installer::CREDENTIAL_RETENTION_ERROR, false);
 $original_post = $_POST;
+$return_page_ids = array();
 $legacy = require __DIR__ . '/../fixtures/legacy-settings.php';
 
 try {
+    $published_return_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'PayKassa Published Return'), true);
+    $draft_return_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'draft', 'post_title' => 'PayKassa Draft Return'), true);
+    $non_page_return_id = wp_insert_post(array('post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'PayKassa Post Return'), true);
+    foreach (array($published_return_page_id, $draft_return_page_id, $non_page_return_id) as $return_page_id) {
+        paykassa_upgrade_assert(is_int($return_page_id), 'Return-page settings fixtures must create WordPress posts.');
+        $return_page_ids[] = $return_page_id;
+    }
     update_option('woocommerce_currency', 'USD', false);
     delete_option('woocommerce_paykassa_settings');
     $fresh_gateway = new PayKassaGateway();
     $fresh_fields = $fresh_gateway->get_form_fields();
     paykassa_upgrade_assert(array('USD') === ($fresh_fields['accepted_order_currencies']['default'] ?? null), 'Fresh USD installation must default Accepted WooCommerce currencies to USD.');
     paykassa_upgrade_assert(isset($fresh_fields['external_base_url'], $fresh_fields['browser_return_base_url']), 'Fresh installations must expose independent callback and browser-return public base settings.');
+    foreach (array('success_return_page_id', 'pending_return_page_id', 'failure_return_page_id') as $return_setting) {
+        paykassa_upgrade_assert('0' === ($fresh_fields[$return_setting]['default'] ?? null), 'Fresh return-page settings must default to native WooCommerce behavior.');
+    }
     foreach (array( 'shop_password', 'api_password' ) as $secret_key) {
         $empty_secret_html = $fresh_gateway->generate_paykassa_secret_html($secret_key, $fresh_fields[$secret_key]);
         paykassa_upgrade_assert(! str_contains($empty_secret_html, 'paykassa-secret-status'), sprintf('Empty %s field must not display a stored-value summary.', $secret_key));
@@ -62,6 +73,9 @@ try {
         $configured_gateway->get_field_key('api_id') => $secret_settings['api_id'],
         $configured_gateway->get_field_key('external_base_url') => 'https://callbacks.example/paykassa',
         $configured_gateway->get_field_key('browser_return_base_url') => 'https://checkout.example/store',
+        $configured_gateway->get_field_key('success_return_page_id') => (string) $published_return_page_id,
+        $configured_gateway->get_field_key('pending_return_page_id') => '0',
+        $configured_gateway->get_field_key('failure_return_page_id') => (string) $published_return_page_id,
     );
     $_POST = $secret_post_base + array(
         $configured_gateway->get_field_key('shop_password') => '',
@@ -72,6 +86,35 @@ try {
     $saved_secrets = get_option('woocommerce_paykassa_settings', array());
     paykassa_upgrade_assert(is_array($saved_secrets) && $secret_settings['shop_password'] === ($saved_secrets['shop_password'] ?? null) && $secret_settings['api_password'] === ($saved_secrets['api_password'] ?? null), 'Empty secret inputs must not overwrite stored values.');
     paykassa_upgrade_assert('https://callbacks.example/paykassa/' === ($saved_secrets['external_base_url'] ?? null) && 'https://checkout.example/store/' === ($saved_secrets['browser_return_base_url'] ?? null), 'Admin save must validate and normalize callback and browser-return base settings independently.');
+    paykassa_upgrade_assert(
+        (string) $published_return_page_id === ($saved_secrets['success_return_page_id'] ?? null)
+        && '0' === ($saved_secrets['pending_return_page_id'] ?? null)
+        && (string) $published_return_page_id === ($saved_secrets['failure_return_page_id'] ?? null),
+        'Admin save must store published page IDs and preserve zero as native WooCommerce behavior.'
+    );
+    $before_invalid_page_save = $saved_secrets;
+    $_POST = array_replace(
+        $secret_post_base,
+        array(
+            $configured_gateway->get_field_key('success_return_page_id') => (string) $draft_return_page_id,
+            $configured_gateway->get_field_key('shop_password') => '',
+            $configured_gateway->get_field_key('api_password') => '',
+            'save' => 'Save changes',
+        )
+    );
+    paykassa_upgrade_assert(! $configured_gateway->process_admin_options(), 'An unpublished return page must be rejected before settings are changed.');
+    paykassa_upgrade_assert($before_invalid_page_save === get_option('woocommerce_paykassa_settings', array()), 'Invalid return-page selection must not partially save gateway settings.');
+    $_POST = array_replace(
+        $secret_post_base,
+        array(
+            $configured_gateway->get_field_key('success_return_page_id') => (string) $non_page_return_id,
+            $configured_gateway->get_field_key('shop_password') => '',
+            $configured_gateway->get_field_key('api_password') => '',
+            'save' => 'Save changes',
+        )
+    );
+    paykassa_upgrade_assert(! $configured_gateway->process_admin_options(), 'A published non-page object must be rejected as a return destination.');
+    paykassa_upgrade_assert($before_invalid_page_save === get_option('woocommerce_paykassa_settings', array()), 'Non-page return selection must not partially save gateway settings.');
 
     $replacement_merchant_secret = 'replacement-merchant-secret';
     $_POST = $secret_post_base + array(
@@ -286,6 +329,9 @@ try {
         delete_option(Installer::CREDENTIAL_RETENTION_ERROR);
     } else {
         update_option(Installer::CREDENTIAL_RETENTION_ERROR, $original_retention_error, false);
+    }
+    foreach ($return_page_ids as $return_page_id) {
+        wp_delete_post($return_page_id, true);
     }
     $_POST = $original_post;
 }

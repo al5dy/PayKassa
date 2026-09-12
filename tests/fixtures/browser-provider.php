@@ -69,6 +69,26 @@ add_action('init', static function (): void {
         exit;
     }
     if (
+        'POST' === strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? ''))
+        && 'custom' === ($_GET['paykassa_browser_return_pages'] ?? null)
+        && 'paykassa-browser-fixture' === ($_POST['token'] ?? null)
+    ) {
+        $settings = get_option('woocommerce_paykassa_settings', array());
+        $success_id = (int) get_option('paykassa_browser_custom_success_id', 0);
+        $pending_id = (int) get_option('paykassa_browser_custom_pending_id', 0);
+        $failure_id = (int) get_option('paykassa_browser_custom_failure_id', 0);
+        if (! is_array($settings) || min($success_id, $pending_id, $failure_id) < 1) {
+            status_header(500);
+            exit;
+        }
+        $settings['success_return_page_id'] = (string) $success_id;
+        $settings['pending_return_page_id'] = (string) $pending_id;
+        $settings['failure_return_page_id'] = (string) $failure_id;
+        update_option('woocommerce_paykassa_settings', $settings, false);
+        status_header(204);
+        exit;
+    }
+    if (
         'POST' !== strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? ''))
         || 'blocks' !== ($_GET['paykassa_browser_checkout'] ?? null)
         || 'paykassa-browser-fixture' !== ($_POST['token'] ?? null)

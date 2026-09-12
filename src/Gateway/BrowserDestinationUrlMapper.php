@@ -44,23 +44,41 @@ final class BrowserDestinationUrlMapper
     }
 
     /**
-     * Filters the mapped destination, then fails safely if another plugin changes its public origin.
+     * Apply the developer override before mapping onto the trusted public browser origin.
      *
-     * @param string $context Stable PayKassa browser event name.
+     * The selected destination is either a native WooCommerce URL or a published
+     * WordPress page permalink. The immutable native URL is passed separately so
+     * integrations can make an informed choice without reading callback input.
+     *
+     * @param string         $context           Stable PayKassa browser event name.
+     * @param \WC_Order|null $order              Authorized order; null for denied returns.
+     * @param string|null    $native_destination Native WooCommerce fallback URL.
      */
-    public function map(string $native_destination, string $context): string
-    {
-        $mapped_destination = $this->map_native_destination($native_destination);
+    public function map(
+        string $selected_destination,
+        string $context,
+        ?\WC_Order $order = null,
+        ?string $native_destination = null
+    ): string {
+        $native_destination ??= $selected_destination;
+        $safe_default = $this->map_allowed_destination($selected_destination)
+            ?? $this->map_allowed_destination($native_destination)
+            ?? $this->browser_base_url;
         $filtered_destination = apply_filters(
             self::DESTINATION_FILTER,
-            $mapped_destination,
+            $selected_destination,
             $native_destination,
-            $context
+            $context,
+            $order
         );
+        if (! is_string($filtered_destination)) {
+            return $safe_default;
+        }
+        $mapped_destination = $this->map_allowed_destination($filtered_destination);
 
-        return is_string($filtered_destination) && $this->is_safe_browser_destination($filtered_destination)
-            ? $filtered_destination
-            : $mapped_destination;
+        return null !== $mapped_destination && $this->is_safe_browser_destination($mapped_destination)
+            ? $mapped_destination
+            : $safe_default;
     }
 
     /** Allow only this redirect's already-validated public browser host in wp_safe_redirect(). */
@@ -101,19 +119,29 @@ final class BrowserDestinationUrlMapper
             && null !== self::relative_path($destination_parts['path'], $browser_parts['path']);
     }
 
-    private function map_native_destination(string $native_destination): string
+    private function map_allowed_destination(string $destination): ?string
     {
-        $destination_parts = self::url_parts($native_destination, true);
+        $destination_parts = self::url_parts($destination, true);
         $canonical_parts = self::url_parts($this->canonical_base_url, false);
-        if (null === $destination_parts || null === $canonical_parts || ! self::same_origin($destination_parts, $canonical_parts)) {
-            return $this->browser_base_url;
+        $browser_parts = self::url_parts($this->browser_base_url, false);
+        if (null === $destination_parts || null === $canonical_parts || null === $browser_parts) {
+            return null;
+        }
+
+        if (self::same_origin($destination_parts, $browser_parts)) {
+            return null !== self::relative_path($destination_parts['path'], $browser_parts['path'])
+                ? $destination
+                : null;
+        }
+        if (! self::same_origin($destination_parts, $canonical_parts)) {
+            return null;
         }
         $relative_path = self::relative_path($destination_parts['path'], $canonical_parts['path']);
         if (null === $relative_path) {
-            return $this->browser_base_url;
+            return null;
         }
         if (! $this->has_browser_override) {
-            return $native_destination;
+            return $destination;
         }
 
         $mapped = $this->browser_base_url . $relative_path;
