@@ -194,6 +194,26 @@ async page => {
 	assert( queryValue( page.url(), 'pay_for_order' ) === 'true', 'Retry navigation must preserve pay_for_order=true.' );
 	assert( await page.getByText( 'The PayKassa payment was not completed.' ).isVisible(), 'Failure return must show a generic retry notice.' );
 	assert( await page.getByRole( 'button', { name: 'Pay for order' } ).isVisible(), 'Failure return must leave the unpaid order retryable.' );
+	const failureStateResponse = await page.request.get(
+		`${ baseUrl }/?paykassa_browser_order_state=${ failedOrderId }&token=paykassa-browser-fixture`
+	);
+	const failureState = await failureStateResponse.json();
+	assert(
+		failureStateResponse.status() === 200 && failureState.paid === false && failureState.order_status === 'pending' && failureState.payment_state === 'awaiting_payment',
+		'Browser failure return must not mutate or settle the awaiting-payment order.'
+	);
+
+	await postNotification( merchantUrls.invoice_notification_url, failedOrderId, `browser-invoice-mismatch-${ failedOrderId }-0123456789abcdef` );
+	await postNotification( merchantUrls.invoice_notification_url, failedOrderId, `browser-invoice-mismatch-${ failedOrderId }-0123456789abcdef` );
+	const mismatchStateResponse = await page.request.get(
+		`${ baseUrl }/?paykassa_browser_order_state=${ failedOrderId }&token=paykassa-browser-fixture`
+	);
+	assert( mismatchStateResponse.status() === 200, 'Mismatch state fixture must remain readable.' );
+	const mismatchState = await mismatchStateResponse.json();
+	assert(
+		mismatchState.paid === false && mismatchState.order_status === 'on-hold' && mismatchState.payment_state === 'manual_review',
+		'Verified invoice mismatch and its duplicate must be acknowledged without payment settlement.'
+	);
 
 	const invoiceGet = await page.request.get( merchantUrls.invoice_notification_url, { maxRedirects: 0 } );
 	const invoiceMissingHash = await page.request.post( merchantUrls.invoice_notification_url, { form: {}, maxRedirects: 0 } );

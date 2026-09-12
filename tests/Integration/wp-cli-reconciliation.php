@@ -234,7 +234,7 @@ try {
     $environment = $make();
     $live_client = (new PayKassaClientFactory())->sci(array_replace($settings, array('testmode' => 'no')));
     $wrong_environment = $processor->process($live_client->verify_ipn($environment['private_hash']));
-    $check(! $wrong_environment['accepted'] && ! wc_get_order((int) $environment['order_id'])->is_paid(), 'Live evidence must not settle a test invoice.');
+    $check($wrong_environment['accepted'] && 'manual_review' === $wrong_environment['outcome'] && ! wc_get_order((int) $environment['order_id'])->is_paid(), 'Live evidence for a test invoice must be durably acknowledged for manual review without settlement.');
 
     // Test -> Live changes: SCI request still uses the test invoice context.
     $reset();

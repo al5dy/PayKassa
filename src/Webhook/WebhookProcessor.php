@@ -71,7 +71,7 @@ final class WebhookProcessor
         if (EventReservation::DUPLICATE === $reservation->status) {
             $status = $this->events->status($reservation->event_key);
             if ('rejected' === $status) {
-                return array('accepted' => false, 'ack' => '', 'outcome' => 'manual_review');
+                return $this->ack($order, 'manual_review');
             }
             if ('manual_review' === $status && $evidence instanceof TransactionNotificationEvidence) {
                 return $this->ack($order, 'manual_review');
@@ -110,7 +110,7 @@ final class WebhookProcessor
                 }
                 $order->update_meta_data('_paykassa_manual_review_reason', 'verified_payment_mismatch');
                 $this->mark_manual_review($order, __('PayKassa verified a payment that does not match the immutable invoice snapshot. Manual review required.', 'paykassa'));
-                return $this->finished($reservation->event_key, $reservation->owner_token, 'rejected', 'payment_mismatch', false, $order);
+                return $this->finished($reservation->event_key, $reservation->owner_token, 'rejected', 'payment_mismatch', $order);
             }
             $manual_reason = (string) $order->get_meta('_paykassa_manual_review_reason', true);
             if (in_array($manual_reason, array( 'retired_invoice_payment', 'verified_payment_mismatch', 'transaction_invoice_ambiguous', 'transaction_payment_mismatch' ), true)) {
@@ -126,14 +126,14 @@ final class WebhookProcessor
             $stored_transaction = (string) $order->get_meta(OrderMeta::TRANSACTION, true);
             if ($order->has_status(wc_get_is_paid_statuses()) || ('' !== $stored_transaction && ! hash_equals($stored_transaction, $evidence->transaction_id))) {
                 if ('' !== $stored_transaction && hash_equals($stored_transaction, $evidence->transaction_id)) {
-                    return $this->finished($reservation->event_key, $reservation->owner_token, 'duplicate', '', true, $order);
+                    return $this->finished($reservation->event_key, $reservation->owner_token, 'duplicate', '', $order);
                 }
                 // A distinct, verified transaction for an already-paid order is
                 // evidence of a duplicate/overpayment, not a harmless retry.
                 $additional = $order->get_meta('_paykassa_additional_transactions', true);
                 $additional = is_array($additional) ? $additional : array();
                 if (isset($additional[$evidence->transaction_id])) {
-                    return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', 'additional_transaction', true, $order);
+                    return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', 'additional_transaction', $order);
                 }
                 $additional[$evidence->transaction_id] = array('amount' => $evidence->amount, 'currency' => $evidence->currency, 'system' => $evidence->system, 'environment' => $reference_snapshot->environment(), 'source' => $source, 'at' => gmdate('c'));
                 $order->update_meta_data('_paykassa_additional_transactions', $additional);
@@ -141,13 +141,13 @@ final class WebhookProcessor
                 $order->update_meta_data('_paykassa_manual_review_reason', 'additional_provider_transaction');
                 $this->mark_manual_review($order, __('PayKassa reported an additional verified payment for a paid or settling order. Manual financial review is required.', 'paykassa'));
                 do_action('paykassa_payment_conflict', $order, $evidence);
-                return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', 'additional_transaction', true, $order);
+                return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', 'additional_transaction', $order);
             }
             if ($order->has_status('cancelled') || 'late_cancelled_payment' === $order->get_meta('_paykassa_manual_review_reason', true)) {
                 $order->update_meta_data('_paykassa_manual_review_reason', 'late_cancelled_payment');
                 $this->mark_manual_review($order, __('PayKassa confirmed a payment after this order was cancelled. Funds were not ignored; manual review is required before fulfilment.', 'paykassa'));
                 do_action('paykassa_payment_conflict', $order, $evidence);
-                return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', 'late_cancelled_payment', true, $order);
+                return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', 'late_cancelled_payment', $order);
             }
 
             // This exact state is the recoverable boundary: if PHP died after
@@ -182,7 +182,7 @@ final class WebhookProcessor
             $order->add_order_note(__('PayKassa payment confirmed by provider verification.', 'paykassa'));
             $this->logger->log('info', 'payment_confirmed', array('order_id' => $order->get_id(), 'transaction_id' => $evidence->transaction_id, 'state' => PaymentState::PAID));
             do_action('paykassa_payment_confirmed', $order, $evidence);
-            return $this->finished($reservation->event_key, $reservation->owner_token, 'processed', '', true, $order);
+            return $this->finished($reservation->event_key, $reservation->owner_token, 'processed', '', $order);
         } catch (\Throwable $exception) {
             // Do not finish: the lease lets a subsequent provider delivery resume
             // safely. No acknowledgement is sent for an uncertain settlement.
@@ -201,12 +201,14 @@ final class WebhookProcessor
         return array('accepted' => false, 'ack' => '', 'outcome' => 'retry');
     }
 
-    private function finished(string $event_key, string $owner_token, string $status, string $error, bool $accepted, \WC_Order $order): array
+    private function finished(string $event_key, string $owner_token, string $status, string $error, \WC_Order $order): array
     {
         if (! $this->events->finish($event_key, $owner_token, $status, $error)) {
             return $this->retry();
         }
-        return $accepted ? $this->ack($order, $status) : array('accepted' => false, 'ack' => '', 'outcome' => 'manual_review');
+        // `rejected` means verified evidence was durably preserved as a
+        // terminal manual-review conflict, not that provider delivery failed.
+        return $this->ack($order, 'rejected' === $status ? 'manual_review' : $status);
     }
 
     private function matches(PaymentSnapshot $snapshot, PaymentEvidence $evidence, \WC_Order $order): bool
@@ -360,7 +362,7 @@ final class WebhookProcessor
         }
         $this->mark_manual_review($order, $note);
         do_action('paykassa_payment_conflict', $order, $evidence);
-        return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', $reason, true, $order);
+        return $this->finished($reservation->event_key, $reservation->owner_token, 'manual_review', $reason, $order);
     }
 
     private function mark_manual_review(\WC_Order $order, string $note): void

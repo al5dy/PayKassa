@@ -25,6 +25,19 @@ add_filter('home_url', static function (string $url, string $path): string {
 add_filter('redirect_canonical', '__return_false');
 
 add_action('init', static function (): void {
+    if ('GET' === strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) && isset($_GET['paykassa_browser_order_state'])) {
+        $order_id = is_string($_GET['paykassa_browser_order_state']) ? (int) $_GET['paykassa_browser_order_state'] : 0;
+        $order = $order_id > 0 ? wc_get_order($order_id) : false;
+        if (! $order instanceof \WC_Order || 'paykassa-browser-fixture' !== ($_GET['token'] ?? null)) {
+            status_header(404);
+            exit;
+        }
+        wp_send_json(array(
+            'paid' => $order->is_paid(),
+            'order_status' => $order->get_status(),
+            'payment_state' => (string) $order->get_meta(\Al5dy\PayKassaWoo\Order\OrderMeta::STATE, true),
+        ));
+    }
     if ('GET' === strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '')) && '1' === ($_GET['paykassa_browser_merchant_urls'] ?? null)) {
         $settings = get_option('woocommerce_paykassa_settings', array());
         $settings = is_array($settings) ? $settings : array();
@@ -101,8 +114,9 @@ add_filter('pre_http_request', static function ($preempt, array $args, string $u
         ));
     } elseif ('sci_confirm_order' === $function) {
         $private_hash = isset($body['private_hash']) && is_string($body['private_hash']) ? $body['private_hash'] : '';
-        preg_match('/^browser-invoice-([1-9][0-9]*)-[a-f0-9]{16}$/', $private_hash, $matches);
-        $order_id = isset($matches[1]) ? (int) $matches[1] : 0;
+        preg_match('/^browser-invoice-(mismatch-)?([1-9][0-9]*)-[a-f0-9]{16}$/', $private_hash, $matches);
+        $mismatch = 'mismatch-' === ($matches[1] ?? '');
+        $order_id = isset($matches[2]) ? (int) $matches[2] : 0;
         $invoice = get_option('paykassa_browser_invoice_' . $order_id, array());
         if ($order_id < 1 || ! is_array($invoice) || '' === ($invoice['hash'] ?? '')) {
             $payload = array('error' => true, 'message' => 'Unknown browser-test invoice.', 'data' => array());
@@ -111,7 +125,7 @@ add_filter('pre_http_request', static function ($preempt, array $args, string $u
                 'order_id' => (string) $order_id,
                 'transaction' => 'browser-transaction-' . $order_id,
                 'shop_id' => 'browser-shop',
-                'amount' => (string) $invoice['amount'],
+                'amount' => $mismatch ? '999999.000000' : (string) $invoice['amount'],
                 'currency' => (string) $invoice['currency'],
                 'system' => (string) $invoice['system'],
                 'address' => '0xbrowserdestination',

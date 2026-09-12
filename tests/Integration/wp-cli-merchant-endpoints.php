@@ -476,11 +476,13 @@ try {
         $invoice_mismatch_result = $processor->process($resolver->verify($invoice_mismatch_hash, $invoice_mismatch->get_id()), EvidenceSource::WEBHOOK_INVOICE);
         $invoice_mismatch = wc_get_order($invoice_mismatch->get_id());
         paykassa_endpoint_assert(
-            ! $invoice_mismatch_result['accepted']
-            && $invoice_mismatch instanceof WC_Order
+            $invoice_mismatch instanceof WC_Order
+            && $invoice_mismatch_result['accepted']
+            && $invoice_mismatch->get_id() . '|success' === $invoice_mismatch_result['ack']
+            && 'manual_review' === $invoice_mismatch_result['outcome']
             && ! $invoice_mismatch->is_paid()
             && PaymentState::MANUAL_REVIEW === $invoice_mismatch->get_meta(OrderMeta::STATE, true),
-            'Invoice IPN ' . $case . ' mismatch must preserve the existing fail-closed settlement behavior.'
+            'Invoice IPN ' . $case . ' mismatch must be durably acknowledged for manual review without settlement.'
         );
     }
 

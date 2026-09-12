@@ -374,7 +374,7 @@ try {
     $wrong_merchant_evidence = new PaymentEvidence($wrong_merchant_evidence->order_id, $wrong_merchant_evidence->transaction_id, $wrong_merchant_evidence->hash_fingerprint, $wrong_merchant_evidence->amount, $wrong_merchant_evidence->currency, $wrong_merchant_evidence->system, $wrong_merchant_evidence->address, $wrong_merchant_evidence->tag, 'another-merchant', $wrong_merchant_evidence->payment_link_hash, $wrong_merchant_evidence->environment);
     $wrong_merchant_result = $processor->process($wrong_merchant_evidence);
     $wrong_merchant = wc_get_order($wrong_merchant->get_id());
-    paykassa_smoke_assert(! $wrong_merchant_result['accepted'] && $wrong_merchant instanceof WC_Order && PaymentState::MANUAL_REVIEW === $wrong_merchant->get_meta(OrderMeta::STATE, true) && ! $wrong_merchant->has_status(wc_get_is_paid_statuses()), 'Wrong merchant must not settle the order.');
+    paykassa_smoke_assert($wrong_merchant instanceof WC_Order && $wrong_merchant_result['accepted'] && $wrong_merchant->get_id() . '|success' === $wrong_merchant_result['ack'] && 'manual_review' === $wrong_merchant_result['outcome'] && PaymentState::MANUAL_REVIEW === $wrong_merchant->get_meta(OrderMeta::STATE, true) && ! $wrong_merchant->has_status(wc_get_is_paid_statuses()), 'Wrong merchant must be durably held and acknowledged without settlement.');
 
     $wrong_hash = paykassa_smoke_order();
     $orders[] = $wrong_hash->get_id();
@@ -386,7 +386,7 @@ try {
     $wrong_hash_evidence = new PaymentEvidence($wrong_hash_evidence->order_id, $wrong_hash_evidence->transaction_id, $wrong_hash_evidence->hash_fingerprint, $wrong_hash_evidence->amount, $wrong_hash_evidence->currency, $wrong_hash_evidence->system, $wrong_hash_evidence->address, $wrong_hash_evidence->tag, $wrong_hash_evidence->shop_id, str_repeat('a', 64), $wrong_hash_evidence->environment);
     $wrong_hash_result = $processor->process($wrong_hash_evidence);
     $wrong_hash = wc_get_order($wrong_hash->get_id());
-    paykassa_smoke_assert(! $wrong_hash_result['accepted'] && $wrong_hash instanceof WC_Order && PaymentState::MANUAL_REVIEW === $wrong_hash->get_meta(OrderMeta::STATE, true) && ! $wrong_hash->has_status(wc_get_is_paid_statuses()), 'Wrong payment-link hash must not settle the order.');
+    paykassa_smoke_assert($wrong_hash instanceof WC_Order && $wrong_hash_result['accepted'] && $wrong_hash->get_id() . '|success' === $wrong_hash_result['ack'] && 'manual_review' === $wrong_hash_result['outcome'] && PaymentState::MANUAL_REVIEW === $wrong_hash->get_meta(OrderMeta::STATE, true) && ! $wrong_hash->has_status(wc_get_is_paid_statuses()), 'Wrong payment-link hash must be durably held and acknowledged without settlement.');
 
     $mismatch = paykassa_smoke_order();
     $orders[] = $mismatch->get_id();
@@ -398,7 +398,9 @@ try {
     $transactions[] = $mismatch_evidence->transaction_id;
     $mismatch_result = $processor->process($mismatch_evidence);
     $mismatch = wc_get_order($mismatch->get_id());
-    paykassa_smoke_assert(! $mismatch_result['accepted'] && $mismatch instanceof WC_Order && PaymentState::MANUAL_REVIEW === $mismatch->get_meta(OrderMeta::STATE, true) && ! $mismatch->has_status(wc_get_is_paid_statuses()), 'Wrong amount must not settle the order and must enter manual review.');
+    $mismatch_repeat = $processor->process($mismatch_evidence);
+    paykassa_smoke_assert($mismatch instanceof WC_Order && $mismatch_result['accepted'] && $mismatch->get_id() . '|success' === $mismatch_result['ack'] && 'manual_review' === $mismatch_result['outcome'] && PaymentState::MANUAL_REVIEW === $mismatch->get_meta(OrderMeta::STATE, true) && ! $mismatch->has_status(wc_get_is_paid_statuses()), 'Wrong amount must enter durable manual review and receive the documented acknowledgement without settlement.');
+    paykassa_smoke_assert($mismatch instanceof WC_Order && $mismatch_repeat['accepted'] && $mismatch->get_id() . '|success' === $mismatch_repeat['ack'] && 'manual_review' === $mismatch_repeat['outcome'] && ! $mismatch->has_status(wc_get_is_paid_statuses()), 'A repeated verified mismatch must be acknowledged from its terminal event without settlement.');
 
     $recovery = paykassa_smoke_order();
     $orders[] = $recovery->get_id();

@@ -141,7 +141,7 @@ popd >/dev/null
 
 PAYKASSA_FAILED_ORDER_ID=$("${wp_cli[@]}" post list --post_type=shop_order,shop_order_placehold --orderby=ID --order=DESC --posts_per_page=1 --field=ID 2>/dev/null || true)
 if [[ -n "$PAYKASSA_FAILED_ORDER_ID" ]]; then
-	PAYKASSA_FAILED_ORDER_ID="$PAYKASSA_FAILED_ORDER_ID" "${wp_cli[@]}" eval '$order = wc_get_order((int) getenv("PAYKASSA_FAILED_ORDER_ID")); if (! $order instanceof WC_Order || $order->is_paid() || "pending" !== $order->get_status()) { throw new RuntimeException("Failure return mutated the unpaid order."); }'
+	PAYKASSA_FAILED_ORDER_ID="$PAYKASSA_FAILED_ORDER_ID" "${wp_cli[@]}" eval '$order = wc_get_order((int) getenv("PAYKASSA_FAILED_ORDER_ID")); if (! $order instanceof WC_Order || $order->is_paid() || "on-hold" !== $order->get_status() || "manual_review" !== $order->get_meta(\Al5dy\PayKassaWoo\Order\OrderMeta::STATE, true)) { throw new RuntimeException("Verified mismatch did not remain unpaid in durable manual review."); }'
 fi
 
-printf 'PayKassa browser E2E passed: same-public-origin and split-origin URL configurations, guest session returns, Classic Checkout, Blocks Checkout, exact IPN ACKs, success return, and failure retry.\n'
+printf 'PayKassa browser E2E passed: same-public-origin and split-origin URL configurations, guest session returns, Classic Checkout, Blocks Checkout, exact IPN ACKs, success return, failure retry, and durable mismatch acknowledgement.\n'
