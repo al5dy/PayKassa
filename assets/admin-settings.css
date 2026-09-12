@@ -1,0 +1,141 @@
+.paykassa-merchant-urls-setting > .paykassa-merchant-urls-content {
+	box-sizing: border-box;
+	padding: 28px 0 10px !important;
+	width: 100%;
+}
+
+.paykassa-merchant-urls-title {
+	display: block;
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.4;
+	margin: 0 0 6px;
+	padding: 0;
+}
+
+.paykassa-merchant-urls-content {
+	box-sizing: border-box;
+	max-width: none;
+	width: 100%;
+}
+
+.paykassa-merchant-urls-intro {
+	margin: 0 0 14px !important;
+	max-width: 920px;
+}
+
+.paykassa-merchant-urls {
+	border: 1px solid #c3c4c7;
+	border-collapse: separate;
+	border-radius: 6px;
+	border-spacing: 0;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+	overflow: hidden;
+	table-layout: fixed;
+	width: 100%;
+}
+
+.paykassa-merchant-urls > tbody > tr > th,
+.paykassa-merchant-urls > tbody > tr > td {
+	border-bottom: 1px solid #dcdcde;
+	box-sizing: border-box;
+	padding: 18px 20px !important;
+	vertical-align: middle;
+}
+
+.paykassa-merchant-urls > tbody > tr:last-child > th,
+.paykassa-merchant-urls > tbody > tr:last-child > td {
+	border-bottom: 0;
+}
+
+.paykassa-merchant-urls .paykassa-merchant-url-details {
+	background: #f6f7f7;
+	width: 34%;
+}
+
+.paykassa-merchant-url-details label {
+	display: block;
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.45;
+}
+
+.paykassa-merchant-url-details .description {
+	margin: 6px 0 0;
+	overflow-wrap: anywhere;
+}
+
+.paykassa-merchant-urls .paykassa-merchant-url-value {
+	background: #fff;
+	width: 66%;
+}
+
+.paykassa-merchant-url-controls {
+	align-items: center;
+	display: flex;
+	gap: 10px;
+	min-width: 0;
+	width: 100%;
+}
+
+.paykassa-merchant-url-controls input[type="text"] {
+	background: #f6f7f7;
+	box-sizing: border-box;
+	flex: 1 1 auto;
+	font-size: 12px;
+	height: 38px;
+	margin: 0;
+	max-width: none;
+	min-width: 0;
+	width: 100%;
+}
+
+.paykassa-merchant-url-controls .paykassa-copy-url {
+	flex: 0 0 auto;
+	margin: 0;
+	min-height: 38px;
+	min-width: 76px;
+}
+
+.paykassa-merchant-url-controls input[type="text"]:focus {
+	background: #fff;
+	box-shadow: 0 0 0 1px #2271b1;
+}
+
+@media screen and (max-width: 960px) {
+	.paykassa-merchant-urls .paykassa-merchant-url-details {
+		width: 40%;
+	}
+
+	.paykassa-merchant-urls .paykassa-merchant-url-value {
+		width: 60%;
+	}
+}
+
+@media screen and (max-width: 782px) {
+	.paykassa-merchant-urls-setting > .paykassa-merchant-urls-content {
+		padding: 24px 0 8px !important;
+	}
+
+	.paykassa-merchant-urls,
+	.paykassa-merchant-urls > tbody,
+	.paykassa-merchant-urls > tbody > tr,
+	.paykassa-merchant-urls > tbody > tr > th,
+	.paykassa-merchant-urls > tbody > tr > td {
+		display: block;
+		width: 100% !important;
+	}
+
+	.paykassa-merchant-urls > tbody > tr > th {
+		border-bottom: 0;
+		padding: 16px 16px 8px !important;
+	}
+
+	.paykassa-merchant-urls > tbody > tr > td {
+		padding: 8px 16px 16px !important;
+	}
+
+	.paykassa-merchant-urls > tbody > tr:last-child > th {
+		border-bottom: 0;
+	}
+}

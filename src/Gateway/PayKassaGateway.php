@@ -84,6 +84,25 @@ final class PayKassaGateway extends \WC_Payment_Gateway
         );
     }
 
+    public static function enqueue_admin_assets(string $hook_suffix): void
+    {
+        if ('woocommerce_page_wc-settings' !== $hook_suffix) {
+            return;
+        }
+        $section = isset($_GET['section']) && is_string($_GET['section'])
+            ? sanitize_key(wp_unslash($_GET['section']))
+            : '';
+        if ('paykassa' !== $section) {
+            return;
+        }
+        wp_enqueue_style(
+            'paykassa-admin-settings',
+            PAYKASSA_URL . 'assets/admin-settings.css',
+            array(),
+            PAYKASSA_VERSION
+        );
+    }
+
     /** Preserve a configured secret when the masked password field is left empty. */
     public function process_admin_options(): bool
     {
@@ -273,10 +292,14 @@ final class PayKassaGateway extends \WC_Payment_Gateway
 
         ob_start();
         ?>
-        <tr valign="top">
-            <th scope="row" class="titledesc"><?php echo esc_html__('PayKassa Merchant URLs', 'paykassa'); ?></th>
-            <td class="forminp">
-                <p class="description"><?php echo esc_html__('Copy each URL into the matching field in PayKassa Merchant settings. Callback and browser-return bases are independent; the plugin never accesses your PayKassa account.', 'paykassa'); ?></p>
+        <tr valign="top" class="paykassa-merchant-urls-setting">
+            <th scope="row" class="titledesc">
+                
+                <label><?php echo esc_html__('PayKassa Merchant URLs', 'paykassa'); ?></label>
+            
+            </th>
+            <td colspan="2" class="paykassa-merchant-urls-content">
+                <p class="description paykassa-merchant-urls-intro"><?php echo esc_html__('Copy each URL into the matching field in PayKassa Merchant settings. Callback and browser-return bases are independent; the plugin never accesses your PayKassa account.', 'paykassa'); ?></p>
                 <table class="widefat striped paykassa-merchant-urls"><tbody>
                     <?php $index = 0; ?>
                     <?php foreach ($rows as $label => $row) : ?>
@@ -285,8 +308,8 @@ final class PayKassaGateway extends \WC_Payment_Gateway
                         $id = 'paykassa-merchant-url-' . $index;
                         ?>
                         <tr>
-                            <th><label for="<?php echo esc_attr($id); ?>"><?php echo esc_html($label); ?></label><p class="description"><?php echo esc_html($row[1]); ?></p></th>
-                            <td><input type="text" readonly class="large-text code" id="<?php echo esc_attr($id); ?>" value="<?php echo esc_attr($row[0]); ?>"> <button type="button" class="button paykassa-copy-url" data-copy-target="<?php echo esc_attr($id); ?>"><?php echo esc_html__('Copy', 'paykassa'); ?></button></td>
+                            <th class="paykassa-merchant-url-details"><label for="<?php echo esc_attr($id); ?>"><?php echo esc_html($label); ?></label><p class="description"><?php echo esc_html($row[1]); ?></p></th>
+                            <td class="paykassa-merchant-url-value"><div class="paykassa-merchant-url-controls"><input type="text" readonly class="large-text code" id="<?php echo esc_attr($id); ?>" value="<?php echo esc_attr($row[0]); ?>"><button type="button" class="button button-secondary paykassa-copy-url" data-copy-target="<?php echo esc_attr($id); ?>"><?php echo esc_html__('Copy', 'paykassa'); ?></button></div></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody></table>

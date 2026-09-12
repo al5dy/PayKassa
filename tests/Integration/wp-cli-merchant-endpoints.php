@@ -253,6 +253,12 @@ try {
     paykassa_endpoint_assert(0 === substr_count($diagnostics, 'data-copy-target='), 'Diagnostics must no longer duplicate the Merchant URL table.');
     $gateway_settings_html = (new PayKassaGateway())->generate_settings_html(array(), false);
     paykassa_endpoint_assert(4 === substr_count($gateway_settings_html, 'data-copy-target='), 'PayKassa gateway settings must render one Copy button for each Merchant URL.');
+    paykassa_endpoint_assert(
+        str_contains($gateway_settings_html, 'paykassa-merchant-urls-setting')
+        && str_contains($gateway_settings_html, 'colspan="2" class="paykassa-merchant-urls-content"')
+        && 4 === substr_count($gateway_settings_html, 'paykassa-merchant-url-controls'),
+        'Merchant URLs must span the settings table and render with scoped responsive control hooks.'
+    );
     foreach (array('URL of Invoice Payment Notifications', 'URL of successful payment', 'URL malfunction when paying', 'URL of Cryptocurrency Transaction Processor') as $merchant_label) {
         paykassa_endpoint_assert(str_contains($gateway_settings_html, $merchant_label), 'Gateway settings must show the exact PayKassa Merchant field label: ' . $merchant_label);
     }
@@ -266,6 +272,15 @@ try {
         paykassa_endpoint_assert(str_contains($gateway_settings_html, 'id="' . $select_id . '"'), 'Gateway settings must render each customer return page selector.');
     }
     paykassa_endpoint_assert(str_contains($gateway_settings_html, 'PayKassa Payment Success') && ! str_contains($gateway_settings_html, 'PayKassa Draft Destination') && ! str_contains($gateway_settings_html, 'PayKassa Non-page Destination'), 'Return page selectors must contain published WordPress pages only.');
+    $original_get = $_GET;
+    $_GET['section'] = 'paykassa';
+    PayKassaGateway::enqueue_admin_assets('woocommerce_page_wc-settings');
+    paykassa_endpoint_assert(wp_style_is('paykassa-admin-settings', 'enqueued'), 'Responsive Merchant URL styles must load on the PayKassa gateway settings page.');
+    wp_dequeue_style('paykassa-admin-settings');
+    $_GET['section'] = 'cod';
+    PayKassaGateway::enqueue_admin_assets('woocommerce_page_wc-settings');
+    paykassa_endpoint_assert(! wp_style_is('paykassa-admin-settings', 'enqueued'), 'PayKassa settings styles must not load for another payment gateway section.');
+    $_GET = $original_get;
     paykassa_endpoint_assert(2 === substr_count($diagnostics, 'External override'), 'Diagnostics must report independent external sources for callback and browser return bases.');
     $original_https = $_SERVER['HTTPS'] ?? null;
     $_SERVER['HTTPS'] = 'on';

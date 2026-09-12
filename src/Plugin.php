@@ -57,6 +57,7 @@ final class Plugin
             $methods[] = PayKassaGateway::class;
             return $methods;
         });
+        add_action('admin_enqueue_scripts', array(PayKassaGateway::class, 'enqueue_admin_assets'));
         add_action('woocommerce_api_' . MerchantEndpointUrls::INVOICE_NOTIFICATION, array(new WebhookController(), 'handle'));
         add_action('woocommerce_api_' . MerchantEndpointUrls::TRANSACTION_NOTIFICATION, array(new TransactionNotificationController(), 'handle'));
         $browser_returns = new BrowserReturnController();
