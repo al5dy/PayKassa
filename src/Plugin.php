@@ -57,6 +57,7 @@ final class Plugin
             $methods[] = PayKassaGateway::class;
             return $methods;
         });
+        add_filter('plugin_action_links_' . plugin_basename(PAYKASSA_FILE), array($this, 'plugin_action_links'));
         add_action('admin_enqueue_scripts', array(PayKassaGateway::class, 'enqueue_admin_assets'));
         add_action('woocommerce_api_' . MerchantEndpointUrls::INVOICE_NOTIFICATION, array(new WebhookController(), 'handle'));
         add_action('woocommerce_api_' . MerchantEndpointUrls::TRANSACTION_NOTIFICATION, array(new TransactionNotificationController(), 'handle'));
@@ -69,6 +70,31 @@ final class Plugin
         ( new DiagnosticsPage() )->register();
         ( new ReconciliationScheduler() )->register();
     }
+
+    /**
+     * @param array<string, string> $links
+     * @return array<string, string>
+     */
+    public function plugin_action_links(array $links): array
+    {
+        if (! current_user_can('manage_woocommerce')) {
+            return $links;
+        }
+
+        $links['paykassa_settings'] = sprintf(
+            '<a href="%s">%s</a>',
+            esc_url(PayKassaGateway::settings_url()),
+            esc_html__('Settings', 'paykassa')
+        );
+        $links['paykassa_health'] = sprintf(
+            '<a href="%s">%s</a>',
+            esc_url(DiagnosticsPage::url()),
+            esc_html__('Health', 'paykassa')
+        );
+
+        return $links;
+    }
+
     public function register_blocks($registry): void
     {
         if (class_exists('Automattic\\WooCommerce\\Blocks\\Payments\\Integrations\\AbstractPaymentMethodType')) {

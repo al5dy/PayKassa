@@ -84,6 +84,19 @@ final class PayKassaGateway extends \WC_Payment_Gateway
         );
     }
 
+    public static function settings_url(): string
+    {
+        return add_query_arg(
+            array(
+                'page' => 'wc-settings',
+                'tab' => 'checkout',
+                'section' => 'paykassa',
+                'from' => 'WCADMIN_PAYMENT_SETTINGS',
+            ),
+            admin_url('admin.php')
+        );
+    }
+
     public static function enqueue_admin_assets(string $hook_suffix): void
     {
         if ('woocommerce_page_wc-settings' !== $hook_suffix) {

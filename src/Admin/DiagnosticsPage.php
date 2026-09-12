@@ -11,6 +11,13 @@ use Al5dy\PayKassaWoo\Reconciliation\ReconciliationService;
 
 final class DiagnosticsPage
 {
+    public const PAGE_SLUG = 'paykassa-health';
+
+    public static function url(): string
+    {
+        return admin_url('admin.php?page=' . self::PAGE_SLUG);
+    }
+
     public function register(): void
     {
         add_action('admin_menu', array( $this, 'menu' ));
@@ -19,7 +26,7 @@ final class DiagnosticsPage
 
     public function menu(): void
     {
-        add_submenu_page('woocommerce', __('PayKassa health', 'paykassa'), __('PayKassa health', 'paykassa'), 'manage_woocommerce', 'paykassa-health', array( $this, 'render' ));
+        add_submenu_page('woocommerce', __('PayKassa health', 'paykassa'), __('PayKassa health', 'paykassa'), 'manage_woocommerce', self::PAGE_SLUG, array( $this, 'render' ));
     }
 
     public function test_connection(): void
@@ -40,7 +47,7 @@ final class DiagnosticsPage
             }
         }
         set_transient('paykassa_connection_test_' . get_current_user_id(), $state, 5 * MINUTE_IN_SECONDS);
-        wp_safe_redirect(admin_url('admin.php?page=paykassa-health'));
+        wp_safe_redirect(self::url());
         exit;
     }
 

@@ -233,6 +233,34 @@ try {
     paykassa_endpoint_assert($urls->server_callback_base_url() === $urls->browser_return_base_url(), 'Same-public-origin configuration must be supported explicitly.');
     paykassa_endpoint_assert($split_urls->server_callback_base_url() !== $split_urls->browser_return_base_url(), 'Split callback/browser origin configuration must be supported explicitly.');
     wp_set_current_user(1);
+    $plugin_links = apply_filters(
+        'plugin_action_links_' . plugin_basename(PAYKASSA_FILE),
+        array('deactivate' => '<a href="#">Deactivate</a>')
+    );
+    paykassa_endpoint_assert(
+        array('deactivate', 'paykassa_settings', 'paykassa_health') === array_keys($plugin_links),
+        'Settings and Health action links must render to the right of Deactivate.'
+    );
+    paykassa_endpoint_assert(
+        str_contains($plugin_links['paykassa_settings'], esc_url(PayKassaGateway::settings_url()))
+        && str_contains($plugin_links['paykassa_settings'], '>Settings</a>'),
+        'The Settings plugin action must link to the PayKassa WooCommerce gateway settings page.'
+    );
+    paykassa_endpoint_assert(
+        str_contains($plugin_links['paykassa_health'], esc_url(DiagnosticsPage::url()))
+        && str_contains($plugin_links['paykassa_health'], '>Health</a>'),
+        'The Health plugin action must link to the PayKassa health page.'
+    );
+    wp_set_current_user(0);
+    $restricted_links = apply_filters(
+        'plugin_action_links_' . plugin_basename(PAYKASSA_FILE),
+        array('deactivate' => '<a href="#">Deactivate</a>')
+    );
+    paykassa_endpoint_assert(
+        array('deactivate') === array_keys($restricted_links),
+        'PayKassa admin action links must not be exposed without manage_woocommerce capability.'
+    );
+    wp_set_current_user(1);
     $success_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'PayKassa Payment Success', 'post_name' => 'paykassa-payment-success'), true);
     $pending_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'PayKassa Payment Pending', 'post_name' => 'paykassa-payment-pending'), true);
     $failure_page_id = wp_insert_post(array('post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'PayKassa Payment Failed', 'post_name' => 'paykassa-payment-failed'), true);
