@@ -13,11 +13,16 @@ final class TransactionNotificationController
 {
     private readonly WebhookProcessor $processor;
     private readonly Logger $logger;
+    private readonly WebhookRateLimitPolicy $rate_limit;
 
-    public function __construct(?WebhookProcessor $processor = null, ?Logger $logger = null)
-    {
+    public function __construct(
+        ?WebhookProcessor $processor = null,
+        ?Logger $logger = null,
+        ?WebhookRateLimitPolicy $rate_limit = null
+    ) {
         $this->logger = $logger ?? new Logger();
         $this->processor = $processor ?? new WebhookProcessor(new WebhookEventStore(), $this->logger);
+        $this->rate_limit = $rate_limit ?? new WebhookRateLimitPolicy();
     }
 
     public function handle(): void
@@ -46,7 +51,7 @@ final class TransactionNotificationController
             status_header(400);
             exit;
         }
-        if (! $this->within_rate_limit()) {
+        if (! $this->rate_limit->allows(WebhookRateLimitPolicy::TRANSACTION_CHANNEL, $hash)) {
             status_header(429);
             header('Retry-After: 60');
             exit;
@@ -104,17 +109,5 @@ final class TransactionNotificationController
         header('Content-Type: text/plain; charset=utf-8');
         echo $order_id . '|success';
         exit;
-    }
-
-    private function within_rate_limit(): bool
-    {
-        $ip = isset($_SERVER['REMOTE_ADDR']) && is_string($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
-        $key = 'paykassa_transaction_ipn_' . hash('sha256', $ip);
-        $count = (int) get_transient($key);
-        if ($count >= 60) {
-            return false;
-        }
-        set_transient($key, $count + 1, MINUTE_IN_SECONDS);
-        return true;
     }
 }

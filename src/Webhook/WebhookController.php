@@ -10,6 +10,10 @@ use Al5dy\PayKassaWoo\PayKassa\Exception\ProviderUnavailableException;
 
 final class WebhookController
 {
+    public function __construct(private readonly WebhookRateLimitPolicy $rate_limit = new WebhookRateLimitPolicy())
+    {
+    }
+
     public function handle(): void
     {
         if ('POST' !== strtoupper((string) ( $_SERVER['REQUEST_METHOD'] ?? '' ))) {
@@ -38,7 +42,7 @@ final class WebhookController
             status_header(400);
             exit;
         }
-        if (! $this->within_rate_limit()) {
+        if (! $this->rate_limit->allows(WebhookRateLimitPolicy::INVOICE_CHANNEL, $hash)) {
             status_header(429);
             header('Retry-After: 60');
             exit;
@@ -65,17 +69,5 @@ final class WebhookController
         // WooCommerce, or an in-flight lease may need another delivery.
         status_header(503);
         exit;
-    }
-
-    private function within_rate_limit(): bool
-    {
-        $ip = isset($_SERVER['REMOTE_ADDR']) && is_string($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
-        $key = 'paykassa_ipn_' . hash('sha256', $ip);
-        $count = (int) get_transient($key);
-        if ($count >= 60) {
-            return false;
-        }
-        set_transient($key, $count + 1, MINUTE_IN_SECONDS);
-        return true;
     }
 }
