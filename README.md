@@ -262,7 +262,7 @@ This plugin connects to the third-party PayKassa service.
 
 When a customer starts payment, the plugin sends the merchant identifier, WooCommerce internal order ID, amount, selected payment currency/network and a short order comment to PayKassa. When PayKassa sends a payment notification, the plugin verifies the callback server-to-server using the configured SCI credentials. The PayKassa Currency API is used when a supported order currency must be converted to the selected payment currency. Optional API credentials are used only for merchant-initiated connectivity/history functionality and optional recovery.
 
-PayKassa service information, terms and privacy information are available from PayKassa: https://paykassa.app/
+PayKassa service information, terms and privacy information are available from PayKassa: https://paykassa.pro/
 
 ## License
 
