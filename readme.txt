@@ -9,17 +9,36 @@ Stable tag: 2.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Accept Bitcoin, USDT, USDC, Ethereum and 12+ cryptocurrencies in WooCommerce via PayKassa with Blocks, HPOS and provider-verified IPN.
+Accept Bitcoin, USDT, USDC, Ethereum, TON and other cryptocurrencies in WooCommerce via PayKassa with TRC20, ERC20, BEP20, Blocks and HPOS.
 
 == Description ==
 
-**Turn WooCommerce into a modern cryptocurrency checkout with PayKassa.**
+**Accept cryptocurrency payments in WooCommerce with PayKassa — Bitcoin, USDT, USDC, Ethereum, TON and more.**
 
-PayKassa for WooCommerce lets customers pay with Bitcoin, Ethereum, USDT, USDC, TON, Litecoin, Dogecoin and other supported cryptocurrencies while your store can continue pricing orders in supported currencies such as USD, EUR, GBP or RUB.
+PayKassa for WooCommerce is a modern cryptocurrency payment gateway for WooCommerce that lets online stores accept Bitcoin, Ethereum, USDT, USDC, TON and other cryptocurrencies through PayKassa.
 
-The plugin combines a customer-friendly hosted crypto checkout with a conservative payment-verification model: an order is marked paid only after PayKassa has verified the server-to-server notification. Browser redirects are never trusted as proof of payment.
+Customers can pay with popular cryptocurrency and network combinations including **USDT TRC20, USDT ERC20, USDT BEP20, USDC ERC20, USDC BEP20, Bitcoin, Ethereum and TON**, while your WooCommerce store can continue pricing products in supported currencies such as **USD, EUR, GBP and RUB**.
 
-= Why use PayKassa for WooCommerce? =
+The plugin supports both classic WooCommerce checkout and **WooCommerce Checkout Blocks**, declares **HPOS compatibility**, supports fiat-to-crypto conversion and provides secure server-to-server PayKassa payment verification.
+
+Unlike integrations that trust a customer browser redirect, PayKassa for WooCommerce marks an order paid only after payment evidence has been verified with PayKassa and matched against the saved payment snapshot.
+
+Whether you need a **WooCommerce USDT payment gateway**, want to **accept Bitcoin in WooCommerce**, or need TRC20, ERC20, BEP20 or TON cryptocurrency payments, PayKassa for WooCommerce provides one integrated payment flow.
+
+= Highlights =
+
+* **Bitcoin payments for WooCommerce** with provider-verified confirmation.
+* **USDT payments for WooCommerce** on TRC20, ERC20, BEP20 and TON where supported.
+* **USDC payments** on supported ERC20 and BEP20 networks.
+* **Ethereum, TON, Litecoin, Dogecoin and more** through the built-in PayKassa payment registry.
+* **WooCommerce Checkout Blocks** and classic checkout support.
+* **HPOS compatible** using WooCommerce order APIs.
+* **Fiat-to-crypto checkout** for supported WooCommerce currencies including USD, EUR, GBP and RUB.
+* **24 cryptocurrency/network payment directions** across supported PayKassa systems.
+* **Secure server-to-server payment verification** before WooCommerce fulfils an order.
+* **Test Mode** for controlled payment testing before going live.
+
+= WooCommerce cryptocurrency payment gateway features =
 
 * **Accept major cryptocurrencies** including BTC, ETH, USDT, USDC, LTC, DOGE, TON, TRX, XRP, BCH, DASH, XLM, BNB, ADA, EOS and SHIB.
 * **24 exact cryptocurrency/network payment directions** across 14 PayKassa payment systems and network variants.
@@ -118,23 +137,80 @@ This plugin connects to the third-party PayKassa payment service. A PayKassa mer
 
 When a customer starts payment, the plugin sends the merchant ID, WooCommerce internal order ID, amount, selected payment currency/network and a short order comment to PayKassa. When PayKassa sends a payment notification, the plugin verifies the provider token server-to-server using the configured SCI credentials. The PayKassa Currency API is used when a supported order currency must be converted to the selected payment currency. Optional API credentials are used for merchant-initiated connection/history checks and optional payment recovery.
 
-PayKassa service, terms and privacy information are available at [PayKassa](https://paykassa.app/).
+PayKassa service information, merchant account access, documentation and integration resources are available at [PayKassa](https://paykassa.pro/).
 
 This plugin is an independent integration and is not an official PayKassa product.
 
 == Installation ==
 
-1. Install and activate WooCommerce.
-2. Install and activate PayKassa for WooCommerce.
+Before configuring the plugin, you need a PayKassa account and a configured PayKassa merchant.
+
+= 1. Prepare your PayKassa account =
+
+1. Create an account or sign in at [PayKassa](https://paykassa.pro/).
+2. In your PayKassa account, create and configure a Merchant for the WooCommerce store where you want to accept cryptocurrency payments.
+3. Keep the Merchant ID and Merchant Password / secret available. You will enter these credentials in the WooCommerce PayKassa gateway settings.
+4. For full diagnostics and optional payment-recovery functionality, create PayKassa API credentials as well. In PayKassa, open **API**, choose **Add API**, configure the required environment and save it.
+5. Keep your API ID and API Password private. Never expose PayKassa merchant or API credentials in public pages, screenshots, support requests or frontend JavaScript.
+
+Basic payment acceptance uses the PayKassa merchant / SCI credentials. API credentials are used by optional diagnostics, connection checks, history access and payment-recovery functionality.
+
+Official PayKassa SCI/API documentation and integration information is available on the [PayKassa Developers](https://paykassa.pro/en/developers/) page.
+
+= 2. Install PayKassa for WooCommerce =
+
+1. Install and activate **WooCommerce**.
+2. Install and activate **PayKassa for WooCommerce**.
 3. Go to **WooCommerce > Settings > Payments > PayKassa**.
-4. Enter your PayKassa Merchant / Shop ID and Merchant secret.
-5. Choose the WooCommerce order currencies you want PayKassa to accept.
-6. Choose the exact cryptocurrency/network payment directions you want to offer.
-7. Copy the four generated Merchant URLs into the matching fields in your PayKassa merchant settings.
-8. Use Test Mode first, then disable it when your Live PayKassa configuration is ready.
-9. Place a controlled payment and verify the WooCommerce order reaches the expected paid status.
+4. Enable the PayKassa payment gateway.
+5. Enter your PayKassa **Merchant / Shop ID** and **Merchant secret**.
+6. If you created PayKassa API credentials, enter the **API ID** and **API Password** in the corresponding PayKassa settings.
+7. Make sure Test Mode in WooCommerce matches the PayKassa environment you intend to use.
+
+= 3. Configure currencies and cryptocurrency networks =
+
+1. Select the WooCommerce order currencies that PayKassa should accept.
+2. Select the exact cryptocurrency/network payment directions you want customers to see at checkout.
+3. You can enable combinations such as Bitcoin, Ethereum, USDT TRC20, USDT ERC20, USDT BEP20, USDC ERC20, USDC BEP20, TON and other supported directions.
+4. Save the WooCommerce PayKassa settings.
+
+= 4. Configure PayKassa Merchant URLs =
+
+After saving the gateway settings, PayKassa for WooCommerce generates the Merchant URLs required for payment notifications and customer returns.
+
+1. Copy the generated PayKassa Merchant URLs from the WooCommerce gateway settings.
+2. Sign in to your account at [PayKassa](https://paykassa.pro/).
+3. Open the corresponding Merchant settings.
+4. Paste each generated URL into the matching PayKassa Merchant URL field.
+5. Save the PayKassa Merchant configuration.
+
+The server callback URL is security-sensitive because verified PayKassa payment notifications are used to confirm WooCommerce orders. The customer success or failure browser return URL alone never marks an order as paid.
+
+= 5. Test the integration before going live =
+
+1. Enable **Test Mode** in the PayKassa WooCommerce gateway.
+2. Make sure the corresponding PayKassa test environment and credentials are configured.
+3. Create a controlled WooCommerce order.
+4. Select PayKassa at checkout.
+5. Choose a cryptocurrency/network payment direction.
+6. Complete a PayKassa test payment.
+7. Confirm that the WooCommerce order receives the expected payment status and PayKassa payment details.
+8. Check **Tools > Site Health** and the PayKassa diagnostics if you want to verify the gateway configuration.
+9. After testing successfully, configure your Live PayKassa credentials and disable Test Mode when you are ready to accept real cryptocurrency payments.
+
+Your WooCommerce store is now ready to accept cryptocurrency payments through PayKassa.
 
 == Frequently Asked Questions ==
+
+= What do I need before using PayKassa for WooCommerce? =
+
+You need a PayKassa account and a configured PayKassa Merchant. Create or configure your merchant at [PayKassa](https://paykassa.pro/) and keep its Merchant ID and Merchant Password / secret available for the WooCommerce gateway settings.
+
+PayKassa API credentials are optional for basic SCI payment acceptance but are recommended when you want to use the plugin's API diagnostics, connection checks, payment history or optional payment-recovery functionality.
+
+= How do I accept USDT TRC20 payments in WooCommerce? =
+
+Enable PayKassa for WooCommerce, configure your PayKassa merchant credentials, enable the USDT / TRON TRC20 payment direction in the gateway settings and make sure your PayKassa Merchant URLs are configured. Customers can then select the available USDT TRC20 payment direction during WooCommerce checkout.
 
 = Can I accept Bitcoin payments in WooCommerce? =
 
