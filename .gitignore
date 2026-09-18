@@ -5,6 +5,12 @@
 # Build / release artifacts
 /dist/
 /build/
+/.parcel-cache/
+
+# Compiled front-end assets (generated from /resources via `npm run build`)
+/assets/admin-settings.css
+/assets/build/
+/assets/images/
 
 # Test caches / reports
 /.phpunit.result.cache

@@ -2,7 +2,8 @@
 set -euo pipefail
 
 base_dir=$(cd "$(dirname "$0")/.." && pwd)
-plugin_zip=${PAYKASSA_TEST_PLUGIN_ZIP:-"$base_dir/dist/paykassa-2.0.0.zip"}
+plugin_version=$(grep -m1 '^ \* Version:' "$base_dir/paykassa.php" | sed -E 's/^ \* Version:[[:space:]]*//')
+plugin_zip=${PAYKASSA_TEST_PLUGIN_ZIP:-"$base_dir/dist/paykassa-$plugin_version.zip"}
 backend_port=${PAYKASSA_E2E_PORT:-8892}
 public_port=${PAYKASSA_E2E_PUBLIC_PORT:-$((backend_port + 1))}
 callback_port=${PAYKASSA_E2E_CALLBACK_PORT:-$((backend_port + 2))}

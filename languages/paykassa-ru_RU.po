@@ -1,498 +1,449 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: PayKassa\n"
+"Project-Id-Version: PayKassa for WooCommerce\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/paykassa\n"
-"POT-Creation-Date: 2026-09-11T21:21:44+02:00\n"
-"PO-Revision-Date: 2018-03-29 00:20+0300\n"
-"Last-Translator: Anton Lokotkov (ziscod) <fakeemail@fakeemail.com>\n"
-"Language-Team: Ziscod\n"
-"Language: ru_RU\n"
+"Last-Translator: Anton Lokotkov <ant.lokotkov@gmail.com>\n"
+"Language-Team: Lokotkov\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Poedit-KeywordsList: __;_e;esc_attr__;esc_html__;esc_attr_e;esc_html_e;_n;"
-"esc_html;esc_attr\n"
-"X-Poedit-Basepath: ..\n"
-"X-Generator: Poedit 2.0.6\n"
-"X-Poedit-SourceCharset: UTF-8\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
-"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
-"X-Poedit-SearchPath-0: ./includes/.\n"
+"POT-Creation-Date: 2026-09-18T12:15:34+02:00\n"
+"PO-Revision-Date: 2026-09-17 14:20+0300\n"
+"Language: ru_RU\n"
+"X-Generator: Poedit 3.4.2\n"
+"X-Domain: paykassa\n"
 
 #. Plugin Name of the plugin
 #: paykassa.php
 msgid "PayKassa for WooCommerce"
-msgstr ""
+msgstr "PayKassa для WooCommerce"
 
 #. Description of the plugin
 #: paykassa.php
 msgid "Modern crypto payments for WooCommerce through PayKassa."
-msgstr ""
+msgstr "Современные криптоплатежи для WooCommerce через PayKassa."
 
 #. Author of the plugin
 #: paykassa.php
 msgid "al5dy"
-msgstr ""
+msgstr "al5dy"
 
-#: src/Admin/DiagnosticsPage.php:22
-#, fuzzy
+#: src/Admin/DiagnosticsPage.php:30
 msgid "PayKassa health"
-msgstr "Песочница"
+msgstr "Состояние PayKassa"
 
-#: src/Admin/DiagnosticsPage.php:28
+#: src/Admin/DiagnosticsPage.php:36
 msgid "You are not allowed to run this check."
-msgstr ""
+msgstr "У вас нет прав для выполнения этой проверки."
 
-#: src/Admin/DiagnosticsPage.php:62
+#: src/Admin/DiagnosticsPage.php:70
+msgid "Plugin version"
+msgstr "Версия плагина"
+
+#: src/Admin/DiagnosticsPage.php:71
+msgid "WordPress version"
+msgstr "Версия WordPress"
+
+#: src/Admin/DiagnosticsPage.php:72
+msgid "WooCommerce version"
+msgstr "Версия WooCommerce"
+
+#: src/Admin/DiagnosticsPage.php:72
 msgid "Not active"
-msgstr ""
+msgstr "Не активен"
 
-#: src/Admin/DiagnosticsPage.php:64 src/Admin/DiagnosticsPage.php:66
-#: src/Admin/DiagnosticsPage.php:67
+#: src/Admin/DiagnosticsPage.php:73
+msgid "PHP version"
+msgstr "Версия PHP"
+
+#: src/Admin/DiagnosticsPage.php:74
+msgid "HTTPS"
+msgstr "HTTPS"
+
+#: src/Admin/DiagnosticsPage.php:74
+#: src/Admin/DiagnosticsPage.php:76
+#: src/Admin/DiagnosticsPage.php:77
 msgid "Yes"
-msgstr ""
+msgstr "Да"
 
-#: src/Admin/DiagnosticsPage.php:64 src/Admin/DiagnosticsPage.php:66
-#: src/Admin/DiagnosticsPage.php:67
+#: src/Admin/DiagnosticsPage.php:74
+#: src/Admin/DiagnosticsPage.php:76
+#: src/Admin/DiagnosticsPage.php:77
 msgid "No"
-msgstr ""
+msgstr "Нет"
 
-#: src/Admin/DiagnosticsPage.php:65
+#: src/Admin/DiagnosticsPage.php:75
+msgid "Mode"
+msgstr "Режим"
+
+#: src/Admin/DiagnosticsPage.php:75
 msgid "Test"
-msgstr ""
+msgstr "Тест"
 
-#: src/Admin/DiagnosticsPage.php:65
+#: src/Admin/DiagnosticsPage.php:75
 msgid "Live"
-msgstr ""
+msgstr "Боевой режим"
 
-#: src/Admin/DiagnosticsPage.php:68
+#: src/Admin/DiagnosticsPage.php:76
+msgid "Merchant credentials configured"
+msgstr "Учётные данные продавца настроены"
+
+#: src/Admin/DiagnosticsPage.php:77
+msgid "API credentials configured"
+msgstr "Учётные данные API настроены"
+
+#: src/Admin/DiagnosticsPage.php:78
 msgid "Public PayKassa callback base URL"
-msgstr "Публичный базовый URL обратных вызовов PayKassa"
+msgstr "Публичный базовый URL обратного вызова PayKassa"
 
-#: src/Admin/DiagnosticsPage.php:69
+#: src/Admin/DiagnosticsPage.php:79
 msgid "Callback URL source"
-msgstr "Источник URL обратных вызовов"
+msgstr "Источник URL обратного вызова"
 
-#: src/Admin/DiagnosticsPage.php:69 src/Admin/DiagnosticsPage.php:71
+#: src/Admin/DiagnosticsPage.php:79
+#: src/Admin/DiagnosticsPage.php:81
 msgid "External override"
 msgstr "Внешнее переопределение"
 
-#: src/Admin/DiagnosticsPage.php:69 src/Admin/DiagnosticsPage.php:71
+#: src/Admin/DiagnosticsPage.php:79
+#: src/Admin/DiagnosticsPage.php:81
 msgid "WordPress home URL"
-msgstr "Домашний URL WordPress"
+msgstr "Главный URL WordPress"
 
-#: src/Admin/DiagnosticsPage.php:70
+#: src/Admin/DiagnosticsPage.php:80
 msgid "Browser return base URL"
-msgstr "Базовый URL возврата браузера"
+msgstr "Базовый URL возврата в браузере"
 
-#: src/Admin/DiagnosticsPage.php:71
+#: src/Admin/DiagnosticsPage.php:81
 msgid "Browser return URL source"
-msgstr "Источник URL возврата браузера"
+msgstr "Источник URL возврата в браузере"
 
-#: src/Admin/DiagnosticsPage.php:72 src/Admin/DiagnosticsPage.php:73
-#: src/Admin/DiagnosticsPage.php:74
+#: src/Admin/DiagnosticsPage.php:82
+msgid "Last reconciliation"
+msgstr "Последняя сверка"
+
+#: src/Admin/DiagnosticsPage.php:82
+#: src/Admin/DiagnosticsPage.php:83
+#: src/Admin/DiagnosticsPage.php:84
 msgid "Never"
-msgstr ""
+msgstr "Никогда"
 
-#: src/Admin/DiagnosticsPage.php:73
+#: src/Admin/DiagnosticsPage.php:83
 msgid "Last completed history scan"
-msgstr "Последняя завершённая проверка истории"
+msgstr "Последнее завершённое сканирование истории"
 
-#: src/Admin/DiagnosticsPage.php:74
+#: src/Admin/DiagnosticsPage.php:84
 msgid "Last recovery error"
-msgstr "Последняя ошибка восстановления платежей"
+msgstr "Последняя ошибка восстановления"
 
-#: src/Admin/DiagnosticsPage.php:75
+#: src/Admin/DiagnosticsPage.php:85
 msgid "History recovery capability"
 msgstr "Возможность восстановления по истории"
 
-#: src/Admin/DiagnosticsPage.php:76
-msgid ""
-"Unsupported in PayKassa Test Mode: history returned no authoritative "
-"incoming-payment records during real sandbox validation."
-msgstr ""
-"Не поддерживается в тестовом режиме PayKassa: при реальной проверке "
-"песочницы история не вернула достоверных записей о входящих платежах."
+#: src/Admin/DiagnosticsPage.php:86
+msgid "Unsupported in PayKassa Test Mode: history returned no authoritative incoming-payment records during real sandbox validation."
+msgstr "Не поддерживается в тестовом режиме PayKassa: при проверке в песочнице история не вернула достоверных записей о входящих платежах."
 
-#: src/Admin/DiagnosticsPage.php:77
-msgid ""
-"Unverified for unattended use until a controlled live lost-webhook payment "
-"proves that history provides authoritative matching fields."
-msgstr ""
-"Не проверено для автоматического использования до тех пор, пока контрольный "
-"LIVE-платёж с потерянным webhook не подтвердит, что история содержит "
-"достоверные поля для сопоставления."
+#: src/Admin/DiagnosticsPage.php:87
+msgid "Unverified for unattended use until a controlled live lost-webhook payment proves that history provides authoritative matching fields."
+msgstr "Не проверено для автоматического использования, пока контролируемый боевой платёж с потерянным вебхуком не подтвердит, что история предоставляет достоверные поля для сопоставления."
 
-#: src/Admin/DiagnosticsPage.php:81
+#: src/Admin/DiagnosticsPage.php:91
 msgid "Recovery status"
-msgstr "Состояние восстановления платежей"
+msgstr "Статус восстановления"
 
-#: src/Admin/DiagnosticsPage.php:81
+#: src/Admin/DiagnosticsPage.php:91
 msgid "History records checked"
 msgstr "Проверено записей истории"
 
-#: src/Admin/DiagnosticsPage.php:81
+#: src/Admin/DiagnosticsPage.php:91
 msgid "Payments recovered"
 msgstr "Восстановлено платежей"
 
-#: src/Admin/DiagnosticsPage.php:81
+#: src/Admin/DiagnosticsPage.php:91
 msgid "Duplicate payments ignored"
-msgstr "Повторных событий без повторного зачисления"
+msgstr "Проигнорировано дублирующихся платежей"
 
-#: src/Admin/DiagnosticsPage.php:81
+#: src/Admin/DiagnosticsPage.php:91
 msgid "Payments requiring manual review"
-msgstr "Платежей, требующих ручной проверки"
+msgstr "Платежи, требующие ручной проверки"
 
-#: src/Admin/DiagnosticsPage.php:81
+#: src/Admin/DiagnosticsPage.php:91
 msgid "History records without sufficient verification"
-msgstr "Записей истории без достаточных данных для проверки"
+msgstr "Записи истории без достаточной верификации"
 
-#: src/Admin/DiagnosticsPage.php:88
+#: src/Admin/DiagnosticsPage.php:98
 msgid "PayKassa payment health"
-msgstr "Диагностика платежей PayKassa"
+msgstr "Состояние платежей PayKassa"
 
-#: src/Admin/DiagnosticsPage.php:90
-msgid ""
-"The stored external PayKassa callback base URL is invalid. Server callback "
-"URLs below use the WordPress home URL until the setting is corrected."
-msgstr ""
-"Сохранённый внешний базовый URL обратных вызовов PayKassa недействителен. До "
-"исправления настройки URL серверных обратных вызовов ниже используют "
-"домашний URL WordPress."
+#: src/Admin/DiagnosticsPage.php:100
+msgid "The stored external PayKassa callback base URL is invalid. Server callback URLs below use the WordPress home URL until the setting is corrected."
+msgstr "Сохранённый внешний базовый URL обратного вызова PayKassa недействителен. Серверные URL обратного вызова ниже используют главный URL WordPress, пока настройка не будет исправлена."
 
-#: src/Admin/DiagnosticsPage.php:92
+#: src/Admin/DiagnosticsPage.php:102
 msgid "Critical: Live PayKassa notification URLs must use HTTPS."
-msgstr ""
-"Критическая ошибка: URL уведомлений PayKassa в рабочем режиме должны "
-"использовать HTTPS."
+msgstr "Критично: URL уведомлений PayKassa в боевом режиме должны использовать HTTPS."
 
-#: src/Admin/DiagnosticsPage.php:95
-msgid ""
-"The stored external PayKassa browser return base URL is invalid. Browser "
-"return URLs below use the WordPress home URL until the setting is corrected."
-msgstr ""
-"Сохранённый внешний базовый URL возврата браузера из PayKassa "
-"недействителен. До исправления настройки URL возврата браузера ниже "
-"используют домашний URL WordPress."
+#: src/Admin/DiagnosticsPage.php:105
+msgid "The stored external PayKassa browser return base URL is invalid. Browser return URLs below use the WordPress home URL until the setting is corrected."
+msgstr "Сохранённый внешний базовый URL возврата в браузере PayKassa недействителен. URL возврата в браузере ниже используют главный URL WordPress, пока настройка не будет исправлена."
 
-#: src/Admin/DiagnosticsPage.php:97
+#: src/Admin/DiagnosticsPage.php:107
 msgid "Critical: Live PayKassa browser return URLs must use HTTPS."
-msgstr ""
-"Критическая ошибка: URL возврата браузера из PayKassa в рабочем режиме "
-"должны использовать HTTPS."
+msgstr "Критично: URL возврата в браузере PayKassa в боевом режиме должны использовать HTTPS."
 
-#: src/Admin/DiagnosticsPage.php:99
-msgid ""
-"Payment recovery is experimental and disabled by default. History records "
-"and invoice TXIDs are never sufficient payment evidence; settlement still "
-"requires SCI-verified immutable payment facts."
-msgstr ""
-"Восстановление платежей экспериментально и по умолчанию отключено. Записи "
-"истории и TXID инвойсов никогда не являются достаточным доказательством "
-"оплаты; для зачисления по-прежнему требуются проверенные через SCI "
-"неизменяемые данные платежа."
+#: src/Admin/DiagnosticsPage.php:109
+msgid "Payment recovery is experimental and disabled by default. History records and invoice TXIDs are never sufficient payment evidence; settlement still requires SCI-verified immutable payment facts."
+msgstr "Восстановление платежей — экспериментальная функция, по умолчанию отключена. Записи истории и TXID счетов сами по себе никогда не являются достаточным доказательством платежа; для расчёта всё равно требуются неизменяемые факты платежа, подтверждённые через SCI."
 
-#: src/Admin/DiagnosticsPage.php:103
+#: src/Admin/DiagnosticsPage.php:115
 msgid "Connected: PayKassa API credentials were accepted."
-msgstr ""
+msgstr "Подключено: учётные данные API PayKassa приняты."
 
-#: src/Admin/DiagnosticsPage.php:103
+#. translators: %s: the server IP address PayKassa is rejecting.
+#: src/Admin/DiagnosticsPage.php:120
+#, php-format
+msgid "Connection failed: PayKassa is rejecting this server's IP address (%s). Add it to this shop's API settings IP whitelist in the PayKassa merchant dashboard, then test again."
+msgstr "Не удалось подключиться: PayKassa отклоняет IP-адрес этого сервера (%s). Добавьте его в белый список IP в настройках API в личном кабинете PayKassa и повторите проверку."
+
+#: src/Admin/DiagnosticsPage.php:121
+msgid "Connection failed: PayKassa is rejecting this server's IP address. Add it to this shop's API settings IP whitelist in the PayKassa merchant dashboard, then test again."
+msgstr "Не удалось подключиться: PayKassa отклоняет IP-адрес этого сервера. Добавьте его в белый список IP в настройках API в личном кабинете PayKassa и повторите проверку."
+
+#: src/Admin/DiagnosticsPage.php:123
 msgid "Connection failed. Check API credentials or PayKassa availability."
-msgstr ""
+msgstr "Не удалось подключиться. Проверьте учётные данные API или доступность PayKassa."
 
-#: src/Admin/DiagnosticsPage.php:103
-msgid ""
-"Add API credentials to run the read-only connection test. SCI credentials "
-"have no documented read-only test."
-msgstr ""
-
-#: src/Admin/DiagnosticsPage.php:112
-msgid "Endpoint diagnostics"
-msgstr ""
-
-#: src/Admin/DiagnosticsPage.php:114
-msgid "Registered"
-msgstr ""
-
-#: src/Admin/DiagnosticsPage.php:114
-msgid "Not registered"
-msgstr ""
-
-#: src/Admin/DiagnosticsPage.php:116
-msgid ""
-"PayKassa notification servers must be able to reach both public POST "
-"endpoints. Source IP is diagnostic only; authenticity always comes from "
-"private_hash followed by PayKassa SCI verification. A GET request returning "
-"405 on either server callback is expected."
-msgstr ""
-
-#: src/Admin/DiagnosticsPage.php:119
-msgid "Test API connection"
-msgstr ""
-
-#: src/Admin/DiagnosticsPage.php:126
-msgid "URL of Invoice Payment Notifications"
-msgstr ""
-
-#: src/Admin/DiagnosticsPage.php:128
-msgid ""
-"Required. Server-to-server payment verification using sci_confirm_order."
-msgstr ""
-
-#: src/Admin/DiagnosticsPage.php:130
-msgid "URL of successful payment"
-msgstr ""
-
-#: src/Admin/DiagnosticsPage.php:132
-msgid "Browser redirect only. Never used as payment evidence."
-msgstr ""
+#: src/Admin/DiagnosticsPage.php:125
+msgid "Add API credentials to run the read-only connection test. SCI credentials have no documented read-only test."
+msgstr "Добавьте учётные данные API, чтобы выполнить тест подключения в режиме только для чтения. Для учётных данных SCI официального теста только для чтения не существует."
 
 #: src/Admin/DiagnosticsPage.php:134
-msgid "URL malfunction when paying"
-msgstr ""
+msgid "Endpoint diagnostics"
+msgstr "Диагностика конечных точек"
 
 #: src/Admin/DiagnosticsPage.php:136
-msgid "Browser redirect only. Does not cancel or settle an order."
-msgstr ""
+msgid "Registered"
+msgstr "Зарегистрировано"
+
+#: src/Admin/DiagnosticsPage.php:136
+msgid "Not registered"
+msgstr "Не зарегистрировано"
 
 #: src/Admin/DiagnosticsPage.php:138
-msgid "URL of Cryptocurrency Transaction Processor"
-msgstr ""
+msgid "PayKassa notification servers must be able to reach both public POST endpoints. Source IP is diagnostic only; authenticity always comes from private_hash followed by PayKassa SCI verification. A GET request returning 405 on either server callback is expected."
+msgstr "Серверы уведомлений PayKassa должны иметь доступ к обеим публичным конечным точкам POST. IP-адрес источника носит только диагностический характер; подлинность всегда определяется через private_hash с последующей проверкой SCI PayKassa. Ответ 405 на GET-запрос к любому серверному обратному вызову является ожидаемым поведением."
 
-#: src/Admin/DiagnosticsPage.php:140
-msgid ""
-"Optional secondary verified transaction notification channel using "
-"sci_confirm_transaction_notification. Live only."
-msgstr ""
+#: src/Admin/DiagnosticsPage.php:141
+msgid "Test API connection"
+msgstr "Проверить подключение к API"
 
-#: src/Admin/DiagnosticsPage.php:143
-#, fuzzy
-msgid "PayKassa Merchant URLs"
-msgstr "Песочница"
+#: src/Admin/DiagnosticsPage.php:149
+msgid "Invoice notification endpoint (POST)"
+msgstr "Конечная точка уведомлений о счёте (POST)"
 
-#: src/Admin/DiagnosticsPage.php:144
-msgid ""
-"Copy each URL into the matching field in PayKassa Merchant settings. "
-"Callback and browser-return bases are configured independently. The browser-"
-"return base must match the public origin where customers perform checkout so "
-"login and WooCommerce session cookies remain available. The plugin does not "
-"access or modify your PayKassa account."
-msgstr ""
-"Скопируйте каждый URL в соответствующее поле настроек магазина PayKassa. "
-"Базовые URL обратных вызовов и возврата браузера настраиваются независимо. "
-"Базовый URL возврата браузера должен совпадать с публичным доменом, на "
-"котором покупатели оформляют заказ, чтобы cookies входа и сессии WooCommerce "
-"оставались доступными. Плагин не получает доступ к вашему аккаунту PayKassa "
-"и не изменяет его."
+#: src/Admin/DiagnosticsPage.php:150
+msgid "Successful payment endpoint (GET)"
+msgstr "Конечная точка успешного платежа (GET)"
+
+#: src/Admin/DiagnosticsPage.php:151
+msgid "Malfunction endpoint (GET)"
+msgstr "Конечная точка сбоя платежа (GET)"
 
 #: src/Admin/DiagnosticsPage.php:152
-msgid "Copy"
-msgstr ""
+msgid "Transaction processor endpoint (POST, Live only)"
+msgstr "Конечная точка обработчика транзакций (POST, только в боевом режиме)"
 
-#: src/Admin/DiagnosticsPage.php:155
-msgid "URL copied."
-msgstr ""
+#: src/Admin/DiagnosticsPage.php:159
+msgid "Disabled"
+msgstr "Отключено"
 
-#: src/Admin/DiagnosticsPage.php:155
-msgid "Select and copy the URL manually."
-msgstr ""
+#: src/Admin/DiagnosticsPage.php:160
+msgid "Busy"
+msgstr "Занято"
+
+#: src/Admin/DiagnosticsPage.php:161
+msgid "Failed"
+msgstr "Ошибка"
 
 #: src/Admin/DiagnosticsPage.php:162
-msgid "Invoice notification endpoint (POST)"
-msgstr ""
+msgid "Waiting to retry"
+msgstr "Ожидание повторной попытки"
 
 #: src/Admin/DiagnosticsPage.php:163
-msgid "Successful payment endpoint (GET)"
-msgstr ""
+msgid "In progress"
+msgstr "Выполняется"
 
 #: src/Admin/DiagnosticsPage.php:164
-msgid "Malfunction endpoint (GET)"
-msgstr ""
+msgid "Needs review"
+msgstr "Требует проверки"
 
 #: src/Admin/DiagnosticsPage.php:165
-msgid "Transaction processor endpoint (POST, Live only)"
-msgstr ""
+msgid "Completed"
+msgstr "Завершено"
 
 #: src/Admin/OrderMetaBox.php:29
-#, fuzzy
 msgid "Payment state"
-msgstr "Оплата завершена"
+msgstr "Статус платежа"
 
 #: src/Admin/OrderMetaBox.php:30
 msgid "Invoice lifecycle"
-msgstr ""
+msgstr "Жизненный цикл счёта"
 
 #: src/Admin/OrderMetaBox.php:31
-#, fuzzy
 msgid "PayKassa transaction"
-msgstr "Песочница"
+msgstr "Транзакция PayKassa"
 
 #: src/Admin/OrderMetaBox.php:32
 msgid "Invoice"
-msgstr ""
+msgstr "Счёт"
 
 #: src/Admin/OrderMetaBox.php:33
 msgid "Network"
-msgstr ""
+msgstr "Сеть"
 
 #: src/Admin/OrderMetaBox.php:34
 msgid "Amount"
-msgstr ""
+msgstr "Сумма"
 
 #: src/Admin/OrderMetaBox.php:35
-#, fuzzy
 msgid "Payment address"
-msgstr "Ожидание выплаты"
+msgstr "Адрес платежа"
 
 #: src/Admin/OrderMetaBox.php:36
 msgid "Tag / memo"
-msgstr ""
+msgstr "Тег / memo"
 
 #: src/Admin/OrderMetaBox.php:37
 msgid "Last webhook"
-msgstr ""
+msgstr "Последний вебхук"
 
 #: src/Admin/OrderMetaBox.php:38
 msgid "Environment"
-msgstr ""
+msgstr "Окружение"
 
 #: src/Admin/OrderMetaBox.php:39
 msgid "Provider expiry"
-msgstr ""
+msgstr "Срок действия у провайдера"
 
 #: src/Admin/OrderMetaBox.php:40
 msgid "Not supplied by PayKassa SCI; automatic TTL is disabled"
-msgstr ""
+msgstr "Не передаётся SCI PayKassa; автоматический TTL отключён"
 
 #: src/Admin/OrderMetaBox.php:43
-#, fuzzy
 msgid "PayKassa payment"
-msgstr "Песочница"
+msgstr "Платёж PayKassa"
 
 #: src/Admin/OrderMetaBox.php:63
 msgid "I confirmed no usable PayKassa invoice exists — allow one retry"
-msgstr ""
+msgstr "Я подтверждаю, что действующего счёта PayKassa не существует — разрешить одну повторную попытку"
 
 #: src/Admin/OrderMetaBox.php:64
-msgid ""
-"Use only after checking PayKassa. A timeout may have created an invoice; an "
-"incorrect confirmation can lead to two payable invoices."
-msgstr ""
+msgid "Use only after checking PayKassa. A timeout may have created an invoice; an incorrect confirmation can lead to two payable invoices."
+msgstr "Используйте только после проверки в PayKassa. Из-за тайм-аута счёт мог быть создан; неверное подтверждение может привести к появлению двух счетов, доступных для оплаты."
 
 #: src/Admin/OrderMetaBox.php:70
 msgid "Retire this PayKassa invoice and allow one replacement"
-msgstr ""
+msgstr "Аннулировать этот счёт PayKassa и разрешить одну замену"
 
 #: src/Admin/OrderMetaBox.php:71
-msgid ""
-"Use only after confirming this hosted invoice is no longer usable. A later "
-"verified payment for the retired invoice will be held for manual review."
-msgstr ""
+msgid "Use only after confirming this hosted invoice is no longer usable. A later verified payment for the retired invoice will be held for manual review."
+msgstr "Используйте только после подтверждения, что этот размещённый счёт больше недействителен. Более поздний подтверждённый платёж по аннулированному счёту будет отправлен на ручную проверку."
 
 #: src/Admin/OrderMetaBox.php:80
 msgid "You are not allowed to resolve PayKassa invoices."
-msgstr ""
+msgstr "У вас нет прав для разрешения счетов PayKassa."
 
 #: src/Admin/OrderMetaBox.php:84
 msgid "A valid WooCommerce order is required."
-msgstr ""
+msgstr "Требуется действительный заказ WooCommerce."
 
 #: src/Admin/OrderMetaBox.php:89
 msgid "The WooCommerce order could not be found."
-msgstr ""
+msgstr "Заказ WooCommerce не найден."
 
 #: src/Admin/OrderMetaBox.php:93
 msgid "The PayKassa invoice lifecycle was not changed."
-msgstr ""
+msgstr "Жизненный цикл счёта PayKassa не был изменён."
 
 #: src/Admin/OrderMetaBox.php:98
-msgid ""
-"The old PayKassa invoice was retired. Checkout may create one replacement "
-"invoice."
-msgstr ""
+msgid "The old PayKassa invoice was retired. Checkout may create one replacement invoice."
+msgstr "Старый счёт PayKassa аннулирован. При оформлении заказа может быть создан один замещающий счёт."
 
 #: src/Admin/OrderMetaBox.php:101
-msgid ""
-"The uncertain create was resolved as failed. Checkout may make one new "
-"attempt."
-msgstr ""
+msgid "The uncertain create was resolved as failed. Checkout may make one new attempt."
+msgstr "Неопределённое создание счёта помечено как неудачное. При оформлении заказа возможна одна новая попытка."
 
 #: src/Admin/OrderMetaBox.php:114
 msgid "Manual invoice resolution"
-msgstr ""
+msgstr "Ручное разрешение счёта"
 
 #: src/Admin/SiteHealth.php:18
 msgid "PayKassa payment configuration"
-msgstr ""
+msgstr "Настройка платежей PayKassa"
 
 #: src/Admin/SiteHealth.php:27
 msgid "PayKassa needs merchant credentials"
-msgstr ""
+msgstr "PayKassa требует учётные данные продавца"
 
 #: src/Admin/SiteHealth.php:27
 msgid "The gateway is enabled but its merchant credentials are incomplete."
-msgstr ""
+msgstr "Способ оплаты включён, но учётные данные продавца заполнены не полностью."
 
 #: src/Admin/SiteHealth.php:32
 msgid "PayKassa public URL override is invalid"
-msgstr "Публичный URL PayKassa переопределён недействительным значением"
+msgstr "Переопределение публичного URL PayKassa недействительно"
 
 #: src/Admin/SiteHealth.php:32
-msgid ""
-"Correct the external callback or browser return base URL before copying "
-"Merchant URLs."
-msgstr ""
-"Исправьте внешний базовый URL обратных вызовов или возврата браузера перед "
-"копированием URL магазина."
+msgid "Correct the external callback or browser return base URL before copying Merchant URLs."
+msgstr "Исправьте внешний базовый URL обратного вызова или возврата в браузере, прежде чем копировать URL для продавца."
 
 #: src/Admin/SiteHealth.php:35
 msgid "PayKassa needs HTTPS in live mode"
-msgstr ""
+msgstr "В боевом режиме PayKassa требуется HTTPS"
 
 #: src/Admin/SiteHealth.php:35
-msgid ""
-"Enable HTTPS for both the public PayKassa callback base and browser return "
-"base before accepting live cryptocurrency payments."
-msgstr ""
-"Перед приёмом рабочих криптовалютных платежей включите HTTPS для публичного "
-"базового URL обратных вызовов PayKassa и базового URL возврата браузера."
+msgid "Enable HTTPS for both the public PayKassa callback base and browser return base before accepting live cryptocurrency payments."
+msgstr "Включите HTTPS как для публичного базового URL обратного вызова PayKassa, так и для базового URL возврата в браузере, прежде чем принимать боевые криптоплатежи."
 
 #: src/Admin/SiteHealth.php:37
-#, fuzzy
 msgid "PayKassa configuration looks ready"
-msgstr "PayKassa шлюз"
+msgstr "Настройка PayKassa выглядит готовой"
 
 #: src/Admin/SiteHealth.php:37
 msgid "No credentials or HTTPS issue was detected."
-msgstr ""
+msgstr "Проблем с учётными данными или HTTPS не обнаружено."
 
-#: src/Blocks/PayKassaPaymentMethod.php:42 src/Gateway/PayKassaGateway.php:29
-#: src/Gateway/PayKassaGateway.php:42 assets/build/blocks.js:4
-msgid "Cryptocurrency (PayKassa)"
-msgstr ""
-
-#: src/Blocks/PayKassaPaymentMethod.php:43 src/Gateway/PayKassaGateway.php:30
+#: src/Blocks/PayKassaPaymentMethod.php:42
+#: src/Gateway/PayKassaGateway.php:30
 #: src/Gateway/PayKassaGateway.php:43
+#: assets/build/blocks.js:1
+msgid "Cryptocurrency (PayKassa)"
+msgstr "Криптовалюта (PayKassa)"
+
+#: src/Blocks/PayKassaPaymentMethod.php:43
+#: src/Gateway/PayKassaGateway.php:31
+#: src/Gateway/PayKassaGateway.php:44
 msgid "Pay securely with cryptocurrency through PayKassa."
-msgstr ""
+msgstr "Безопасная оплата криптовалютой через PayKassa."
 
-#: src/Gateway/BrowserReturnController.php:37
-msgid ""
-"We could not verify access to that order. Sign in or return to checkout to "
-"continue."
-msgstr ""
+#: src/Gateway/BrowserReturnController.php:45
+msgid "We could not verify access to that order. Sign in or return to checkout to continue."
+msgstr "Не удалось подтвердить доступ к этому заказу. Войдите в аккаунт или вернитесь к оформлению заказа, чтобы продолжить."
 
-#: src/Gateway/BrowserReturnController.php:46
-msgid ""
-"The PayKassa payment was not completed. You can try again or choose another "
-"payment method."
-msgstr ""
+#: src/Gateway/BrowserReturnController.php:58
+msgid "The PayKassa payment was not completed. You can try again or choose another payment method."
+msgstr "Платёж через PayKassa не был завершён. Вы можете попробовать снова или выбрать другой способ оплаты."
 
-#: src/Gateway/BrowserReturnController.php:55
-msgid ""
-"Your cryptocurrency payment is being confirmed. The order status will update "
-"automatically."
-msgstr ""
+#: src/Gateway/BrowserReturnController.php:71
+msgid "Your cryptocurrency payment is being confirmed. The order status will update automatically."
+msgstr "Ваш криптоплатёж подтверждается. Статус заказа обновится автоматически."
+
+#. translators: %d is the numeric WordPress page ID.
+#: src/Gateway/BrowserReturnDestinationResolver.php:74
+#, php-format
+msgid "Page #%d"
+msgstr "Страница №%d"
 
 #: src/Gateway/PayKassaGateway.php:22
 msgid "PayKassa"
@@ -500,491 +451,367 @@ msgstr "PayKassa"
 
 #: src/Gateway/PayKassaGateway.php:23
 msgid "Provider-verified cryptocurrency payments through PayKassa."
-msgstr ""
-
-#: src/Gateway/PayKassaGateway.php:41
-msgid "Enable/Disable"
-msgstr "Включить/Выключить"
-
-#: src/Gateway/PayKassaGateway.php:41
-#, fuzzy
-msgid "Enable PayKassa"
-msgstr "Включить тестовый режим"
+msgstr "Криптоплатежи с проверкой провайдера через PayKassa."
 
 #: src/Gateway/PayKassaGateway.php:42
+msgid "Enable/Disable"
+msgstr "Включить/выключить"
+
+#: src/Gateway/PayKassaGateway.php:42
+msgid "Enable PayKassa"
+msgstr "Включить PayKassa"
+
+#: src/Gateway/PayKassaGateway.php:43
 msgid "Title"
 msgstr "Название"
 
-#: src/Gateway/PayKassaGateway.php:43
+#: src/Gateway/PayKassaGateway.php:44
 msgid "Description"
 msgstr "Описание"
 
-#: src/Gateway/PayKassaGateway.php:44
+#: src/Gateway/PayKassaGateway.php:45
 msgid "Merchant / Shop ID"
-msgstr ""
-
-#: src/Gateway/PayKassaGateway.php:44
-msgid "Your PayKassa SCI merchant identifier."
-msgstr ""
+msgstr "ID продавца / магазина"
 
 #: src/Gateway/PayKassaGateway.php:45
+msgid "Your PayKassa SCI merchant identifier."
+msgstr "Идентификатор продавца SCI PayKassa."
+
+#: src/Gateway/PayKassaGateway.php:46
 msgid "Merchant secret"
-msgstr ""
+msgstr "Секретный ключ продавца"
 
-#: src/Gateway/PayKassaGateway.php:45 src/Gateway/PayKassaGateway.php:52
+#: src/Gateway/PayKassaGateway.php:46
+#: src/Gateway/PayKassaGateway.php:53
 msgid "Leave blank when saving to keep the current secret."
-msgstr ""
+msgstr "Оставьте поле пустым при сохранении, чтобы сохранить текущий секретный ключ."
 
-#: src/Gateway/PayKassaGateway.php:46
+#: src/Gateway/PayKassaGateway.php:47
 msgid "Test mode"
-msgstr ""
+msgstr "Тестовый режим"
 
-#: src/Gateway/PayKassaGateway.php:46
-#, fuzzy
+#: src/Gateway/PayKassaGateway.php:47
 msgid "Use PayKassa test mode"
-msgstr "Включить оплату по PayKassa"
+msgstr "Использовать тестовый режим PayKassa"
 
-#: src/Gateway/PayKassaGateway.php:47
+#: src/Gateway/PayKassaGateway.php:48
 msgid "External PayKassa callback base URL (optional)"
-msgstr "Внешний базовый URL обратных вызовов PayKassa (необязательно)"
-
-#: src/Gateway/PayKassaGateway.php:47
-msgid ""
-"Used only for the Invoice Payment Notification and Cryptocurrency "
-"Transaction Processor URLs. Empty uses the WordPress home URL. HTTPS is "
-"required in Live mode."
-msgstr ""
-"Используется только для URL уведомления об оплате счёта и обработчика "
-"криптовалютных транзакций. Пустое значение использует домашний URL WordPress. "
-"В рабочем режиме требуется HTTPS."
+msgstr "Внешний базовый URL обратного вызова PayKassa (необязательно)"
 
 #: src/Gateway/PayKassaGateway.php:48
+msgid "Used only for the Invoice Payment Notification and Cryptocurrency Transaction Processor URLs. Empty uses the WordPress home URL. HTTPS is required in Live mode."
+msgstr "Используется только для URL уведомлений об оплате счёта и обработчика криптовалютных транзакций. Если поле пустое, используется главный URL WordPress. В боевом режиме требуется HTTPS."
+
+#: src/Gateway/PayKassaGateway.php:49
 msgid "External PayKassa browser return base URL (optional)"
-msgstr "Внешний базовый URL возврата браузера из PayKassa (необязательно)"
-
-#: src/Gateway/PayKassaGateway.php:48
-msgid ""
-"Used only for successful payment and malfunction browser returns. Set it to "
-"the public origin where customers perform checkout so login and WooCommerce "
-"session cookies remain available. Empty uses the WordPress home URL. HTTPS "
-"is required in Live mode."
-msgstr ""
-"Используется только для возврата браузера после успешной оплаты и ошибки. "
-"Укажите публичный домен, на котором покупатели оформляют заказ, чтобы cookies "
-"входа и сессии WooCommerce оставались доступными. Пустое значение использует "
-"домашний URL WordPress. В рабочем режиме требуется HTTPS."
+msgstr "Внешний базовый URL возврата в браузере PayKassa (необязательно)"
 
 #: src/Gateway/PayKassaGateway.php:49
+msgid "Used only for successful payment and malfunction browser returns. Set it to the public origin where customers perform checkout so login and WooCommerce session cookies remain available. Empty uses the WordPress home URL. HTTPS is required in Live mode."
+msgstr "Используется только для возврата в браузере при успешном платеже и сбое. Укажите публичный источник (origin), на котором покупатели оформляют заказ, чтобы куки авторизации и сессии WooCommerce оставались доступными. Если поле пустое, используется главный URL WordPress. В боевом режиме требуется HTTPS."
+
+#: src/Gateway/PayKassaGateway.php:50
 msgid "Accepted WooCommerce currencies"
-msgstr ""
-
-#: src/Gateway/PayKassaGateway.php:49
-msgid ""
-"Show PayKassa only for these WooCommerce order currencies. Fiat orders "
-"receive a fresh PayKassa quote only when an invoice is created."
-msgstr ""
+msgstr "Принимаемые валюты WooCommerce"
 
 #: src/Gateway/PayKassaGateway.php:50
+msgid "Show PayKassa only for these WooCommerce order currencies. Fiat orders receive a fresh PayKassa quote only when an invoice is created."
+msgstr "Показывать PayKassa только для этих валют заказов WooCommerce. Для заказов в фиатной валюте новая котировка PayKassa запрашивается только при создании счёта."
+
+#: src/Gateway/PayKassaGateway.php:51
 msgid "Enabled crypto payment methods"
-msgstr ""
-
-#: src/Gateway/PayKassaGateway.php:50
-msgid ""
-"Choose exact cryptocurrency and network combinations. Existing enabled "
-"network settings are preserved during upgrade until this setting is saved."
-msgstr ""
+msgstr "Включённые способы оплаты криптовалютой"
 
 #: src/Gateway/PayKassaGateway.php:51
-msgid "API ID (optional)"
-msgstr ""
-
-#: src/Gateway/PayKassaGateway.php:51
-msgid "Only required for connection tests and payment recovery."
-msgstr ""
+msgid "Choose exact cryptocurrency and network combinations. Existing enabled network settings are preserved during upgrade until this setting is saved."
+msgstr "Выберите точные комбинации криптовалюты и сети. Существующие включённые настройки сети сохраняются при обновлении до момента сохранения этой настройки."
 
 #: src/Gateway/PayKassaGateway.php:52
-#, fuzzy
+msgid "API ID (optional)"
+msgstr "API ID (необязательно)"
+
+#: src/Gateway/PayKassaGateway.php:52
+msgid "Only required for connection tests and payment recovery."
+msgstr "Требуется только для проверки подключения и восстановления платежей."
+
+#: src/Gateway/PayKassaGateway.php:53
 msgid "API password (optional)"
-msgstr "Пароль магазина"
-
-#: src/Gateway/PayKassaGateway.php:53
-msgid "Minimum payment amounts by PayKassa direction (optional)"
-msgstr ""
-
-#: src/Gateway/PayKassaGateway.php:53
-msgid ""
-"Optional merchant policy, one exact provider network and currency per line: "
-"Provider_System:CURRENCY=amount. Empty means disabled. These values are not "
-"claimed to be official PayKassa minimums."
-msgstr ""
+msgstr "Пароль API (необязательно)"
 
 #: src/Gateway/PayKassaGateway.php:54
+msgid "Minimum payment amounts by PayKassa direction (optional)"
+msgstr "Минимальные суммы платежа по направлениям PayKassa (необязательно)"
+
+#: src/Gateway/PayKassaGateway.php:54
+msgid "Optional merchant policy, one exact provider network and currency per line: Provider_System:CURRENCY=amount. Empty means disabled. These values are not claimed to be official PayKassa minimums."
+msgstr "Необязательное правило продавца, по одной точной комбинации сети провайдера и валюты в строке: Provider_System:CURRENCY=сумма. Пустое значение означает отключено. Эти значения не являются официальными минимумами PayKassa."
+
+#: src/Gateway/PayKassaGateway.php:55
 msgid "Payment recovery"
 msgstr "Восстановление платежей"
 
-#: src/Gateway/PayKassaGateway.php:54
-msgid ""
-"Enable bounded background reconciliation when API credentials are configured"
-msgstr ""
-"Включить фоновую сверку платежей ограниченными пакетами при настроенных "
-"ключах API"
-
-#: src/Gateway/PayKassaGateway.php:54
-msgid ""
-"Experimental: PayKassa Test Mode history recovery is unsupported. Keep "
-"unattended recovery disabled until a controlled live lost-webhook test "
-"succeeds."
-msgstr ""
-"Экспериментальная функция: восстановление по истории в тестовом режиме "
-"PayKassa не поддерживается. Оставьте автоматическое восстановление "
-"отключённым до успешной контрольной LIVE-проверки с потерянным webhook."
+#: src/Gateway/PayKassaGateway.php:55
+msgid "Enable bounded background reconciliation when API credentials are configured"
+msgstr "Включить ограниченную фоновую сверку при наличии настроенных учётных данных API"
 
 #: src/Gateway/PayKassaGateway.php:55
+msgid "Experimental: PayKassa Test Mode history recovery is unsupported. Keep unattended recovery disabled until a controlled live lost-webhook test succeeds."
+msgstr "Экспериментально: восстановление по истории в тестовом режиме PayKassa не поддерживается. Держите автоматическое восстановление отключённым, пока контролируемый боевой тест с потерянным вебхуком не завершится успешно."
+
+#: src/Gateway/PayKassaGateway.php:56
 msgid "Initial recovery lookback (days)"
-msgstr "Глубина первой проверки истории (дни)"
-
-#: src/Gateway/PayKassaGateway.php:55
-msgid ""
-"Later runs resume saved progress, including after a long outage. History "
-"records without an SCI verification token require review; they are never "
-"credited from history alone."
-msgstr ""
-"Повторные запуски продолжают сохранённую проверку, в том числе после "
-"длительного сбоя. Записи без токена SCI требуют разбора: платежи никогда не "
-"зачисляются только на основании истории."
+msgstr "Глубина начального восстановления (дней)"
 
 #: src/Gateway/PayKassaGateway.php:56
+msgid "Later runs resume saved progress, including after a long outage. History records without an SCI verification token require review; they are never credited from history alone."
+msgstr "Последующие запуски продолжают с сохранённого места, в том числе после длительного простоя. Записи истории без токена верификации SCI требуют проверки; они никогда не зачисляются только на основании истории."
+
+#: src/Gateway/PayKassaGateway.php:57
 msgid "Debug logging"
-msgstr ""
+msgstr "Отладочное логирование"
 
-#: src/Gateway/PayKassaGateway.php:56
+#: src/Gateway/PayKassaGateway.php:57
 msgid "Write redacted diagnostic logs"
-msgstr ""
+msgstr "Вести диагностические логи с маскированием данных"
 
-#: src/Gateway/PayKassaGateway.php:57
+#: src/Gateway/PayKassaGateway.php:58
 msgid "Uninstall cleanup"
-msgstr ""
+msgstr "Очистка при удалении"
 
-#: src/Gateway/PayKassaGateway.php:57
+#: src/Gateway/PayKassaGateway.php:58
 msgid "Delete plugin settings and webhook audit data on uninstall"
-msgstr ""
+msgstr "Удалять настройки плагина и данные аудита вебхуков при удалении плагина"
 
-#: src/Gateway/PayKassaGateway.php:97
-msgid ""
-"PayKassa settings were not changed because the existing SCI credentials "
-"could not be retained for unfinished orders."
-msgstr ""
+#: src/Gateway/PayKassaGateway.php:60
+msgid "Customer return pages"
+msgstr "Страницы возврата покупателя"
 
-#: src/Gateway/PayKassaGateway.php:122
-msgid ""
-"PayKassa settings were not changed because the previous SCI credential "
-"profile could not be retained."
-msgstr ""
+#: src/Gateway/PayKassaGateway.php:62
+msgid "These settings affect browser UX only. They never verify, settle, cancel, or otherwise change a payment."
+msgstr "Эти настройки влияют только на интерфейс в браузере. Они никогда не подтверждают, не проводят расчёт, не отменяют и никак иначе не изменяют платёж."
 
-#: src/Gateway/PayKassaGateway.php:132
-msgid ""
-"The new PayKassa SCI credentials were saved, but cannot be used to create "
-"invoices until their verification profile can be retained."
-msgstr ""
+#: src/Gateway/PayKassaGateway.php:65
+msgid "After successful payment"
+msgstr "После успешного платежа"
 
-#: src/Gateway/PayKassaGateway.php:158
+#: src/Gateway/PayKassaGateway.php:68
+msgid "Default — Native WooCommerce thank-you page"
+msgstr "По умолчанию — стандартная страница благодарности WooCommerce"
+
+#: src/Gateway/PayKassaGateway.php:69
+msgid "Selecting a custom page bypasses the native WooCommerce order-received page and its thank-you hooks. Leave this at Default unless you intentionally use a custom post-payment page."
+msgstr "Выбор произвольной страницы обходит стандартную страницу получения заказа WooCommerce и её хуки благодарности. Оставьте значение по умолчанию, если вы намеренно не используете произвольную страницу после оплаты."
+
+#: src/Gateway/PayKassaGateway.php:72
+msgid "While payment is being confirmed"
+msgstr "Пока платёж подтверждается"
+
+#: src/Gateway/PayKassaGateway.php:75
+msgid "Default — Native WooCommerce order page"
+msgstr "По умолчанию — стандартная страница заказа WooCommerce"
+
+#: src/Gateway/PayKassaGateway.php:76
+msgid "Used only when the customer returns before the verified server notification has completed the order."
+msgstr "Используется только тогда, когда покупатель возвращается раньше, чем подтверждённое серверное уведомление завершит обработку заказа."
+
+#: src/Gateway/PayKassaGateway.php:79
+msgid "After failed / cancelled payment"
+msgstr "После неудачного / отменённого платежа"
+
+#: src/Gateway/PayKassaGateway.php:82
+msgid "Default — Native WooCommerce retry-payment page"
+msgstr "По умолчанию — стандартная страница повторной оплаты WooCommerce"
+
+#: src/Gateway/PayKassaGateway.php:83
+msgid "Used only for an unpaid order. If the order is already paid, PayKassa always uses the successful-payment destination."
+msgstr "Используется только для неоплаченного заказа. Если заказ уже оплачен, PayKassa всегда использует страницу успешного платежа."
+
+#: src/Gateway/PayKassaGateway.php:170
+msgid "PayKassa settings were not changed because the existing SCI credentials could not be retained for unfinished orders."
+msgstr "Настройки PayKassa не были изменены, так как не удалось сохранить существующие учётные данные SCI для незавершённых заказов."
+
+#: src/Gateway/PayKassaGateway.php:195
+msgid "PayKassa settings were not changed because the previous SCI credential profile could not be retained."
+msgstr "Настройки PayKassa не были изменены, так как не удалось сохранить предыдущий профиль учётных данных SCI."
+
+#: src/Gateway/PayKassaGateway.php:205
+msgid "The new PayKassa SCI credentials were saved, but cannot be used to create invoices until their verification profile can be retained."
+msgstr "Новые учётные данные SCI PayKassa сохранены, но не могут использоваться для создания счетов, пока не удастся сохранить их профиль верификации."
+
+#: src/Gateway/PayKassaGateway.php:218
+msgid "Default — Native WooCommerce behavior"
+msgstr "По умолчанию — стандартное поведение WooCommerce"
+
+#: src/Gateway/PayKassaGateway.php:260
 msgid "Stored value:"
 msgstr "Сохранённое значение:"
 
-#: src/Gateway/PayKassaGateway.php:159
+#: src/Gateway/PayKassaGateway.php:261
 msgid "Reset value"
 msgstr "Сбросить значение"
 
-#: src/Gateway/PayKassaGateway.php:209 assets/build/blocks.js:17
+#: src/Gateway/PayKassaGateway.php:289
+msgid "URL of Invoice Payment Notifications"
+msgstr "URL уведомлений об оплате счёта"
+
+#: src/Gateway/PayKassaGateway.php:291
+msgid "Required. Server-to-server payment verification using sci_confirm_order."
+msgstr "Обязательно. Серверная проверка платежа через sci_confirm_order."
+
+#: src/Gateway/PayKassaGateway.php:293
+msgid "URL of successful payment"
+msgstr "URL успешного платежа"
+
+#: src/Gateway/PayKassaGateway.php:295
+msgid "Browser redirect only. Never used as payment evidence."
+msgstr "Только перенаправление в браузере. Никогда не используется как доказательство платежа."
+
+#: src/Gateway/PayKassaGateway.php:297
+msgid "URL malfunction when paying"
+msgstr "URL сбоя при оплате"
+
+#: src/Gateway/PayKassaGateway.php:299
+msgid "Browser redirect only. Does not cancel or settle an order."
+msgstr "Только перенаправление в браузере. Не отменяет и не проводит расчёт по заказу."
+
+#: src/Gateway/PayKassaGateway.php:301
+msgid "URL of Cryptocurrency Transaction Processor"
+msgstr "URL обработчика криптовалютных транзакций"
+
+#: src/Gateway/PayKassaGateway.php:303
+msgid "Optional secondary verified transaction notification channel using sci_confirm_transaction_notification. Live only."
+msgstr "Необязательный дополнительный канал подтверждённых уведомлений о транзакциях через sci_confirm_transaction_notification. Только в боевом режиме."
+
+#: src/Gateway/PayKassaGateway.php:312
+msgid "PayKassa Merchant URLs"
+msgstr "URL для продавца PayKassa"
+
+#: src/Gateway/PayKassaGateway.php:316
+msgid "Copy each URL into the matching field in PayKassa Merchant settings. Callback and browser-return bases are independent; the plugin never accesses your PayKassa account."
+msgstr "Скопируйте каждый URL в соответствующее поле в настройках продавца PayKassa. Базовые адреса обратного вызова и возврата в браузере независимы друг от друга; плагин никогда не обращается к вашему аккаунту PayKassa."
+
+#: src/Gateway/PayKassaGateway.php:326
+msgid "Copy"
+msgstr "Копировать"
+
+#: src/Gateway/PayKassaGateway.php:331
+msgid "URL copied."
+msgstr "URL скопирован."
+
+#: src/Gateway/PayKassaGateway.php:331
+msgid "Select and copy the URL manually."
+msgstr "Выделите и скопируйте URL вручную."
+
+#: src/Gateway/PayKassaGateway.php:379
+#: assets/build/blocks.js:1
 msgid "Pay with cryptocurrency"
-msgstr ""
+msgstr "Оплатить криптовалютой"
 
-#: src/Gateway/PayKassaGateway.php:220
+#: src/Gateway/PayKassaGateway.php:390
 msgid "Choose an available PayKassa cryptocurrency and network."
-msgstr ""
+msgstr "Выберите доступную криптовалюту и сеть PayKassa."
 
-#: src/Gateway/PayKassaGateway.php:231
+#: src/Gateway/PayKassaGateway.php:401
 msgid "We could not find this order."
-msgstr ""
+msgstr "Не удалось найти этот заказ."
 
-#: src/Gateway/PayKassaGateway.php:243
-msgid ""
-"PayKassa payment creation failed. See redacted PayKassa logs for correlation "
-"details."
-msgstr ""
+#: src/Gateway/PayKassaGateway.php:413
+msgid "PayKassa payment creation failed. See redacted PayKassa logs for correlation details."
+msgstr "Не удалось создать платёж PayKassa. Подробности см. в логах PayKassa с маскированными данными."
 
-#: src/Gateway/PayKassaGateway.php:244
-msgid ""
-"We could not start the PayKassa payment. Please try another method or "
-"contact the store."
-msgstr ""
+#: src/Gateway/PayKassaGateway.php:414
+msgid "We could not start the PayKassa payment. Please try another method or contact the store."
+msgstr "Не удалось начать платёж PayKassa. Попробуйте другой способ оплаты или свяжитесь с магазином."
 
 #: src/Infrastructure/Installer.php:225
-msgid ""
-"PayKassa is disabled because this store currency is not supported by the "
-"configured PayKassa conversion currencies. Choose a supported Accepted "
-"WooCommerce currency in the gateway settings."
-msgstr ""
+msgid "PayKassa is disabled because this store currency is not supported by the configured PayKassa conversion currencies. Choose a supported Accepted WooCommerce currency in the gateway settings."
+msgstr "PayKassa отключена, так как валюта этого магазина не поддерживается настроенными валютами конвертации PayKassa. Выберите поддерживаемую валюту в настройках способа оплаты (Принимаемые валюты WooCommerce)."
 
 #: src/Infrastructure/Installer.php:229
-msgid ""
-"PayKassa is disabled because no crypto payment methods are enabled. Choose "
-"at least one Enabled crypto payment method in the gateway settings."
-msgstr ""
+msgid "PayKassa is disabled because no crypto payment methods are enabled. Choose at least one Enabled crypto payment method in the gateway settings."
+msgstr "PayKassa отключена, так как не включён ни один способ оплаты криптовалютой. Включите хотя бы один способ оплаты криптовалютой в настройках способа оплаты."
 
 #: src/Order/InvoiceLifecycleService.php:81
-msgid ""
-"PayKassa invoice was retired. A later provider-confirmed payment for it will "
-"require manual review; checkout may create one replacement invoice."
-msgstr ""
+msgid "PayKassa invoice was retired. A later provider-confirmed payment for it will require manual review; checkout may create one replacement invoice."
+msgstr "Счёт PayKassa аннулирован. Более поздний подтверждённый провайдером платёж по нему потребует ручной проверки; при оформлении заказа может быть создан один замещающий счёт."
 
 #: src/Order/InvoiceLifecycleService.php:145
-msgid ""
-"A merchant manually confirmed that the uncertain PayKassa create produced no "
-"usable invoice. One new checkout attempt is now allowed."
-msgstr ""
+msgid "A merchant manually confirmed that the uncertain PayKassa create produced no usable invoice. One new checkout attempt is now allowed."
+msgstr "Продавец вручную подтвердил, что неопределённое создание счёта PayKassa не привело к появлению действующего счёта. Теперь разрешена одна новая попытка оформления заказа."
 
 #: src/Order/OrderPaymentService.php:225
-msgid ""
-"PayKassa returned a created invoice with an untrusted redirect URL. The "
-"invoice was preserved and automatic retry is blocked."
-msgstr ""
+msgid "PayKassa returned a created invoice with an untrusted redirect URL. The invoice was preserved and automatic retry is blocked."
+msgstr "PayKassa вернула созданный счёт с ненадёжным URL перенаправления. Счёт сохранён, автоматическая повторная попытка заблокирована."
 
 #: src/Order/OrderPaymentService.php:239
 msgid "PayKassa payment invoice created; awaiting provider confirmation."
-msgstr ""
+msgstr "Счёт на оплату PayKassa создан; ожидается подтверждение провайдера."
 
 #: src/Order/OrderPaymentService.php:301
-msgid ""
-"PayKassa invoice creation has an uncertain provider outcome. Automatic retry "
-"is blocked until a merchant resolves it."
-msgstr ""
+msgid "PayKassa invoice creation has an uncertain provider outcome. Automatic retry is blocked until a merchant resolves it."
+msgstr "Результат создания счёта PayKassa у провайдера не определён. Автоматическая повторная попытка заблокирована, пока продавец не разрешит ситуацию."
 
 #: src/Plugin.php:32
-msgid ""
-"PayKassa could not verify its payment-event database schema. The gateway "
-"remains disabled; please retry the migration from WooCommerce status tools."
-msgstr ""
+msgid "PayKassa could not verify its payment-event database schema. The gateway remains disabled; please retry the migration from WooCommerce status tools."
+msgstr "PayKassa не удалось проверить схему базы данных событий платежей. Способ оплаты остаётся отключённым; повторите миграцию в инструментах состояния WooCommerce."
 
 #: src/Plugin.php:52
-msgid ""
-"PayKassa cannot safely retain SCI credentials for unfinished orders. New "
-"invoices are blocked until credential-profile storage is available."
-msgstr ""
+msgid "PayKassa cannot safely retain SCI credentials for unfinished orders. New invoices are blocked until credential-profile storage is available."
+msgstr "PayKassa не может безопасно сохранить учётные данные SCI для незавершённых заказов. Создание новых счетов заблокировано, пока не станет доступным хранилище профиля учётных данных."
+
+#: src/Plugin.php:87
+msgid "Settings"
+msgstr "Настройки"
+
+#: src/Plugin.php:92
+msgid "Health"
+msgstr "Состояние"
 
 #: src/Support/Requirements.php:25
-msgid ""
-"PayKassa for WooCommerce requires PHP 8.1+, WordPress 6.6+, and WooCommerce "
-"8.5+."
-msgstr ""
+msgid "PayKassa for WooCommerce requires PHP 8.1+, WordPress 6.6+, and WooCommerce 8.5+."
+msgstr "PayKassa для WooCommerce требует PHP 8.1+, WordPress 6.6+ и WooCommerce 8.5+."
 
 #: src/Webhook/WebhookProcessor.php:97
-#, fuzzy
-msgid ""
-"PayKassa verified a payment for a retired invoice. The order was not "
-"fulfilled; manual financial review is required."
-msgstr ""
-"PayKassa подтвердил дополнительный платёж для оплаченного или "
-"обрабатываемого заказа. Требуется ручная финансовая проверка."
+msgid "PayKassa verified a payment for a retired invoice. The order was not fulfilled; manual financial review is required."
+msgstr "PayKassa подтвердила платёж по аннулированному счёту. Заказ не был выполнен; требуется ручная финансовая проверка."
 
-#: src/Webhook/WebhookProcessor.php:112 src/Webhook/WebhookProcessor.php:244
-msgid ""
-"PayKassa verified a payment that does not match the immutable invoice "
-"snapshot. Manual review required."
-msgstr ""
+#: src/Webhook/WebhookProcessor.php:112
+#: src/Webhook/WebhookProcessor.php:246
+msgid "PayKassa verified a payment that does not match the immutable invoice snapshot. Manual review required."
+msgstr "PayKassa подтвердила платёж, не соответствующий неизменяемому снимку счёта. Требуется ручная проверка."
 
 #: src/Webhook/WebhookProcessor.php:123
-msgid ""
-"PayKassa verified another payment while an earlier verified payment conflict "
-"is unresolved. Automatic fulfilment remains blocked."
-msgstr ""
+msgid "PayKassa verified another payment while an earlier verified payment conflict is unresolved. Automatic fulfilment remains blocked."
+msgstr "PayKassa подтвердила ещё один платёж, пока не разрешён конфликт по ранее подтверждённому платежу. Автоматическое выполнение заказа остаётся заблокированным."
 
 #: src/Webhook/WebhookProcessor.php:142
-msgid ""
-"PayKassa reported an additional verified payment for a paid or settling "
-"order. Manual financial review is required."
-msgstr ""
-"PayKassa подтвердил дополнительный платёж для оплаченного или "
-"обрабатываемого заказа. Требуется ручная финансовая проверка."
+msgid "PayKassa reported an additional verified payment for a paid or settling order. Manual financial review is required."
+msgstr "PayKassa сообщила о дополнительном подтверждённом платеже по уже оплаченному или обрабатываемому заказу. Требуется ручная финансовая проверка."
 
 #: src/Webhook/WebhookProcessor.php:148
-msgid ""
-"PayKassa confirmed a payment after this order was cancelled. Funds were not "
-"ignored; manual review is required before fulfilment."
-msgstr ""
-"PayKassa подтвердил платёж после отмены заказа. Средства не проигнорированы; "
-"перед исполнением заказа требуется ручная проверка."
+msgid "PayKassa confirmed a payment after this order was cancelled. Funds were not ignored; manual review is required before fulfilment."
+msgstr "PayKassa подтвердила платёж после отмены этого заказа. Средства не были проигнорированы; перед выполнением заказа требуется ручная проверка."
 
 #: src/Webhook/WebhookProcessor.php:182
 msgid "PayKassa payment confirmed by provider verification."
-msgstr "Платёж PayKassa подтверждён проверкой у платёжного провайдера."
+msgstr "Платёж PayKassa подтверждён проверкой провайдера."
 
-#: src/Webhook/WebhookProcessor.php:266
-#, fuzzy
-msgid ""
-"PayKassa verified a credited transaction for a retired invoice. The order "
-"was not fulfilled; manual financial review is required."
-msgstr ""
-"PayKassa подтвердил дополнительный платёж для оплаченного или "
-"обрабатываемого заказа. Требуется ручная финансовая проверка."
+#: src/Webhook/WebhookProcessor.php:268
+msgid "PayKassa verified a credited transaction for a retired invoice. The order was not fulfilled; manual financial review is required."
+msgstr "PayKassa подтвердила зачисленную транзакцию по аннулированному счёту. Заказ не был выполнен; требуется ручная финансовая проверка."
 
-#: src/Webhook/WebhookProcessor.php:281
-msgid ""
-"PayKassa verified a credited transaction that matches more than one active "
-"or retired invoice. Automatic fulfilment is blocked for manual financial "
-"review."
-msgstr ""
+#: src/Webhook/WebhookProcessor.php:283
+msgid "PayKassa verified a credited transaction that matches more than one active or retired invoice. Automatic fulfilment is blocked for manual financial review."
+msgstr "PayKassa подтвердила зачисленную транзакцию, соответствующую более чем одному активному или аннулированному счёту. Автоматическое выполнение заказа заблокировано для ручной финансовой проверки."
 
-#: src/Webhook/WebhookProcessor.php:290
-msgid ""
-"PayKassa verified a credited transaction that does not unambiguously match "
-"the immutable invoice history. Automatic fulfilment is blocked for manual "
-"financial review."
-msgstr ""
+#: src/Webhook/WebhookProcessor.php:292
+msgid "PayKassa verified a credited transaction that does not unambiguously match the immutable invoice history. Automatic fulfilment is blocked for manual financial review."
+msgstr "PayKassa подтвердила зачисленную транзакцию, которая неоднозначно соответствует неизменяемой истории счетов. Автоматическое выполнение заказа заблокировано для ручной финансовой проверки."
 
-#: assets/build/blocks.js:15
-#, fuzzy
+#: assets/build/blocks.js:1
 msgid "PayKassa payment options"
-msgstr "Настройки PayKassa"
+msgstr "Способы оплаты PayKassa"
 
-#: assets/build/blocks.js:23
-#, fuzzy
+#: assets/build/blocks.js:1
 msgid "Pay with PayKassa"
-msgstr "PayKassa"
-
-#~ msgid ""
-#~ "Critical: the canonical WordPress home URL must use HTTPS for secure "
-#~ "PayKassa browser returns."
-#~ msgstr ""
-#~ "Критическая ошибка: канонический домашний URL WordPress должен "
-#~ "использовать HTTPS для безопасного возврата браузера из PayKassa."
-
-#~ msgid "Provide services of receiving payments on the website"
-#~ msgstr "Предоставляет услуги приема платежей на сайте"
-
-#~ msgid "%sSandbox enabled.%s"
-#~ msgstr "%sТестовый режим включен%s"
-
-#~ msgid "PayKassa Request Failure"
-#~ msgstr "Сбой запроса к PayKassa"
-
-#~ msgid "PayKassa IPN"
-#~ msgstr "PayKassa IPN"
-
-#~ msgid "Payment for cancelled order %s received"
-#~ msgstr "Оплата за отмененный заказ %s получена"
-
-#~ msgid ""
-#~ "Order #%s has been marked paid by PayKassa, but was previously cancelled. "
-#~ "Admin handling required."
-#~ msgstr ""
-#~ "Заказ #%s был отмечен как оплаченный, но ранее был отменен. Требуется "
-#~ "обработка администратора."
-
-#~ msgid "This controls the title which the user sees during checkout."
-#~ msgstr "Заголовок, который видит пользователь в процессе оформления заказа."
-
-#~ msgid ""
-#~ "Payment method description that the customer will see on your checkout."
-#~ msgstr ""
-#~ "Описание способа оплаты, которое клиент будет видеть при оформлении "
-#~ "заказа."
-
-#~ msgid ""
-#~ "It allowing you to instantly make payments on your website and make bulk "
-#~ "payments through many payment systems."
-#~ msgstr ""
-#~ "Позволяет моментально принимать платежи на своем сайте и делать массовые "
-#~ "выплаты, через множество платежных систем."
-
-#~ msgid "Shop ID"
-#~ msgstr "ID магазина"
-
-#~ msgid "ID from Shop settings page. Required parameter."
-#~ msgstr ""
-#~ "Идентификатор магазина. Берется из настроек магазина. Обязательный "
-#~ "параметр."
-
-#~ msgid "The secret key from Shop settings page. Required parameter."
-#~ msgstr "Секретный ключ из настроек магазина. Обязательный параметр."
-
-#~ msgid "PayKassa sandbox can be used to test payments."
-#~ msgstr "Песочница используется для проверки тестовых платежей."
-
-#~ msgid "Before using, please take the following steps:"
-#~ msgstr "Перед использованием, пожалуйста выполните следующие шаги:"
-
-#~ msgid "%sRegister%s and add new shop."
-#~ msgstr "%sЗарегестируйтесь%s и добавьте новый магазин."
-
-#~ msgid "Set the following endpoints:"
-#~ msgstr "Установите следующие конечные точки:"
-
-#~ msgid ""
-#~ "URL notification: https://YOUR_STORE.COM/%s?wc-api=wc_gateway_paykassa%s"
-#~ msgstr ""
-#~ "URL уведомлений: https://YOUR_STORE.COM/%s?wc-api=wc_gateway_paykassa%s"
-
-#~ msgid "Gateway disabled"
-#~ msgstr "Шлюз отключен"
-
-#~ msgid ""
-#~ "PayKassa does not support your store currency. Supported currencies - "
-#~ "RUB, USD, BTC, ETH, LTC, DASH, BCH, ZEC"
-#~ msgstr ""
-#~ "PayKassa не поддерживает вашу валюту магазина. Поддерживаемые валюты - "
-#~ "RUB, USD, BTC, ETH, LTC, DASH, BCH, ZEC"
-
-#~ msgid "Error: %s"
-#~ msgstr "Ошибка: %s"
-
-#~ msgid ""
-#~ "There is issue for connectin payment gateway. Sorry for the inconvenience."
-#~ msgstr "Проблема в шлюзе при подключения. Приносим извинения за неудобства."
-
-#~ msgid "Response was not get any data."
-#~ msgstr "Ответ не получил данных."
-
-#~ msgid "Response body is empty."
-#~ msgstr "Пустой обратный ответ."
-
-#~ msgid "Order - #%s"
-#~ msgstr "Заказ - №%s"
-
-#~ msgid ""
-#~ "<strong>%s</strong> is enabled and WooCommerce is not forcing the SSL "
-#~ "certificate on your checkout page. Please ensure that you have a valid "
-#~ "SSL certificate and that you are <a href=\"%s\">forcing the checkout "
-#~ "pages to be secured</a>."
-#~ msgstr ""
-#~ "<strong>%s</strong> включена, но WooCommerce не использует SSL на "
-#~ "странице оплаты. Пожалуйста, убедитесь что имеете валидный SSL сертификат "
-#~ "и включили <a href=\"%s\">принудительную защиту оформления заказа</a>."
-
-#~ msgid "Settings"
-#~ msgstr "Настройки"
-
-#~ msgid "Send money to me"
-#~ msgstr "Перевести средства"
-
-#~ msgid "Donate"
-#~ msgstr "Помощь"
-
-#~ msgid "URL notification: https://YOUR_STORE.COM/%s?wcpaykassa=info%s"
-#~ msgstr "URL уведомлений: https://YOUR_STORE.COM/%s?wcpaykassa=info%s"
-
-#~ msgid "URL success payment: https://YOUR_STORE.COM/%s?wcpaykassa=success%s"
-#~ msgstr "URL успешной оплаты: https://YOUR_STORE.COM/%s?wcpaykassa=success%s"
-
-#~ msgid "URL fail payment: https://YOUR_STORE.COM/%s?wcpaykassa=error%s"
-#~ msgstr "URL неудачной оплаты: https://YOUR_STORE.COM/%s?wcpaykassa=error%s"
-
-#~ msgid ""
-#~ "<strong>%s</strong> is enabled and WooCommerce is not forcing the SSL "
-#~ "certificate on your checkout page. Please ensure that you have a valid "
-#~ "SSL certificate and that you are <a href=\"%s\">forcing the checkout "
-#~ "pages to be secured.</a>"
-#~ msgstr ""
-#~ "<strong>%s</strong> и WooCommerce не использует SSL на странице оплаты. "
-#~ "Пожалуйста, убедитесь что имеете валидный SSL сертификат и <a href=\"%s"
-#~ "\">включили соответствующую опцию.</a>"
+msgstr "Оплатить через PayKassa"

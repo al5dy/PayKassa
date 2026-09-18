@@ -4,7 +4,8 @@ set -euo pipefail
 # All writes are restricted to a new, disposable WordPress site and database.
 # PAYKASSA_TEST_DB_* credentials must belong to the local/CI test database server.
 base_dir=$(cd "$(dirname "$0")/.." && pwd)
-plugin_zip=${PAYKASSA_TEST_PLUGIN_ZIP:-"$base_dir/dist/paykassa-2.0.0.zip"}
+plugin_version=$(grep -m1 '^ \* Version:' "$base_dir/paykassa.php" | sed -E 's/^ \* Version:[[:space:]]*//')
+plugin_zip=${PAYKASSA_TEST_PLUGIN_ZIP:-"$base_dir/dist/paykassa-$plugin_version.zip"}
 if [[ ! -f "$plugin_zip" ]]; then
     printf 'Build the release ZIP before running integration tests.\n' >&2
     exit 1
