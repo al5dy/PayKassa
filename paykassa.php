@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PayKassa for WooCommerce
  * Description: Modern crypto payments for WooCommerce through PayKassa.
- * Version: 2.0.0
+ * Version: 2.0.1
  * Requires at least: 6.6
  * Requires PHP: 8.1
  * Requires Plugins: woocommerce
@@ -19,7 +19,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PAYKASSA_VERSION', '2.0.0' );
+define( 'PAYKASSA_VERSION', '2.0.1' );
 define( 'PAYKASSA_FILE', __FILE__ );
 define( 'PAYKASSA_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PAYKASSA_URL', plugin_dir_url( __FILE__ ) );

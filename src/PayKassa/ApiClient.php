@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Al5dy\PayKassaWoo\PayKassa;
 
 use Al5dy\PayKassaWoo\PayKassa\Exception\ConfigurationException;
+use Al5dy\PayKassaWoo\PayKassa\Exception\IpNotAllowlistedException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\ProviderUnavailableException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\InvalidResponseException;
 use Al5dy\PayKassaWoo\PayKassa\Dto\HistoryPage;
@@ -31,9 +32,27 @@ final class ApiClient
     {
         $response = $this->request(array( 'func' => 'api_get_merchant_info', 'shop_id' => $shop_id ));
         if (true === $response['error']) {
+            $blocked_ip = self::extract_unallowlisted_ip($response['message'] ?? null);
+            if (null !== $blocked_ip) {
+                throw new IpNotAllowlistedException($blocked_ip);
+            }
             throw new ProviderUnavailableException('PayKassa API rejected the request.');
         }
         return $response;
+    }
+
+    /**
+     * Recognizes only PayKassa's exact, fixed-format IP-whitelist rejection
+     * message and extracts the IP address it names. Never returns anything
+     * for any other message: provider messages may echo request credentials
+     * and must not otherwise be surfaced.
+     */
+    private static function extract_unallowlisted_ip(mixed $message): ?string
+    {
+        if (! is_string($message) || 1 !== preg_match('/^Access to this IP is prohibited\.\s*Add the IP:\s*(\S+)\s*white\s*list of API settings\.?$/i', $message, $matches)) {
+            return null;
+        }
+        return false !== filter_var($matches[1], FILTER_VALIDATE_IP) ? $matches[1] : null;
     }
 
     public function history(string $shop_id, string $from, string $to, int $page = 0): HistoryPage

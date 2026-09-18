@@ -17,6 +17,11 @@ if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
+if [[ ! -f "$BASE_DIR/assets/admin-settings.css" || ! -f "$BASE_DIR/assets/build/blocks.js" ]]; then
+    echo "Compiled front-end assets are missing. Run 'npm run build' first."
+    exit 1
+fi
+
 STAGE_DIR="$(mktemp -d)"
 trap 'rm -rf "$STAGE_DIR"' EXIT
 
@@ -32,8 +37,6 @@ cp "$BASE_DIR/uninstall.php" "$PLUGIN_DIR/"
 cp -a "$BASE_DIR/src" "$PLUGIN_DIR/"
 cp -a "$BASE_DIR/assets" "$PLUGIN_DIR/"
 cp -a "$BASE_DIR/languages" "$PLUGIN_DIR/"
-
-rm -rf "$PLUGIN_DIR/assets/src"
 
 ZIP="$BASE_DIR/dist/paykassa-$VERSION.zip"
 

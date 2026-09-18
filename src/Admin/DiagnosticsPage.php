@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Al5dy\PayKassaWoo\Admin;
 
 use Al5dy\PayKassaWoo\Gateway\MerchantEndpointUrls;
+use Al5dy\PayKassaWoo\PayKassa\Exception\IpNotAllowlistedException;
 use Al5dy\PayKassaWoo\PayKassa\Exception\PayKassaException;
 use Al5dy\PayKassaWoo\PayKassa\PayKassaClientFactory;
 use Al5dy\PayKassaWoo\Reconciliation\ReconciliationService;
@@ -37,13 +38,15 @@ final class DiagnosticsPage
         check_admin_referer('paykassa_test_connection');
         $settings = get_option('woocommerce_paykassa_settings', array());
         $settings = is_array($settings) ? $settings : array();
-        $state = 'unavailable';
+        $state = array('status' => 'unavailable');
         if ('' !== ( $settings['api_id'] ?? '' ) && '' !== ( $settings['api_password'] ?? '' )) {
             try {
                 ( new PayKassaClientFactory() )->api($settings)->merchant_info((string) ( $settings['shop_id'] ?? '' ));
-                $state = 'connected';
+                $state = array('status' => 'connected');
+            } catch (IpNotAllowlistedException $exception) {
+                $state = array('status' => 'ip_not_allowlisted', 'ip' => $exception->ip);
             } catch (PayKassaException $exception) {
-                $state = 'failed';
+                $state = array('status' => 'failed');
             }
         }
         set_transient('paykassa_connection_test_' . get_current_user_id(), $state, 5 * MINUTE_IN_SECONDS);
@@ -64,19 +67,19 @@ final class DiagnosticsPage
         $invalid_browser_url = ! self::sanitize_external_base_setting($endpoint_settings, 'browser_return_base_url', ! $test_mode);
         $endpoint_urls = new MerchantEndpointUrls($endpoint_settings);
         $report = array(
-            'Plugin version' => PAYKASSA_VERSION,
-            'WordPress version' => get_bloginfo('version'),
-            'WooCommerce version' => defined('WC_VERSION') ? WC_VERSION : __('Not active', 'paykassa'),
-            'PHP version' => PHP_VERSION,
-            'HTTPS' => is_ssl() ? __('Yes', 'paykassa') : __('No', 'paykassa'),
-            'Mode' => $test_mode ? __('Test', 'paykassa') : __('Live', 'paykassa'),
-            'Merchant credentials configured' => ( '' !== ( $settings['shop_id'] ?? '' ) && '' !== ( $settings['shop_password'] ?? '' ) ) ? __('Yes', 'paykassa') : __('No', 'paykassa'),
-            'API credentials configured' => ( '' !== ( $settings['api_id'] ?? '' ) && '' !== ( $settings['api_password'] ?? '' ) ) ? __('Yes', 'paykassa') : __('No', 'paykassa'),
+            __('Plugin version', 'paykassa') => PAYKASSA_VERSION,
+            __('WordPress version', 'paykassa') => get_bloginfo('version'),
+            __('WooCommerce version', 'paykassa') => defined('WC_VERSION') ? WC_VERSION : __('Not active', 'paykassa'),
+            __('PHP version', 'paykassa') => PHP_VERSION,
+            __('HTTPS', 'paykassa') => is_ssl() ? __('Yes', 'paykassa') : __('No', 'paykassa'),
+            __('Mode', 'paykassa') => $test_mode ? __('Test', 'paykassa') : __('Live', 'paykassa'),
+            __('Merchant credentials configured', 'paykassa') => ( '' !== ( $settings['shop_id'] ?? '' ) && '' !== ( $settings['shop_password'] ?? '' ) ) ? __('Yes', 'paykassa') : __('No', 'paykassa'),
+            __('API credentials configured', 'paykassa') => ( '' !== ( $settings['api_id'] ?? '' ) && '' !== ( $settings['api_password'] ?? '' ) ) ? __('Yes', 'paykassa') : __('No', 'paykassa'),
             __('Public PayKassa callback base URL', 'paykassa') => $endpoint_urls->server_callback_base_url(),
             __('Callback URL source', 'paykassa') => 'external_override' === $endpoint_urls->server_callback_source() ? __('External override', 'paykassa') : __('WordPress home URL', 'paykassa'),
             __('Browser return base URL', 'paykassa') => $endpoint_urls->browser_return_base_url(),
             __('Browser return URL source', 'paykassa') => 'external_override' === $endpoint_urls->browser_return_source() ? __('External override', 'paykassa') : __('WordPress home URL', 'paykassa'),
-            'Last reconciliation' => get_option('paykassa_last_reconciliation', __('Never', 'paykassa')),
+            __('Last reconciliation', 'paykassa') => get_option('paykassa_last_reconciliation', __('Never', 'paykassa')),
             __('Last completed history scan', 'paykassa') => get_option('paykassa_last_history_scan', __('Never', 'paykassa')),
             __('Last recovery error', 'paykassa') => get_option('paykassa_last_reconciliation_error', __('Never', 'paykassa')),
             __('History recovery capability', 'paykassa') => $test_mode
@@ -88,7 +91,7 @@ final class DiagnosticsPage
             foreach (array('status' => __('Recovery status', 'paykassa'), 'checked' => __('History records checked', 'paykassa'), 'recovered' => __('Payments recovered', 'paykassa'), 'duplicate' => __('Duplicate payments ignored', 'paykassa'), 'manual_review' => __('Payments requiring manual review', 'paykassa'), 'unverifiable' => __('History records without sufficient verification', 'paykassa')) as $key => $label) {
                 $value = $recovery[$key] ?? '';
                 if (is_string($value) || is_int($value)) {
-                    $report[$label] = $value;
+                    $report[$label] = 'status' === $key && is_string($value) ? self::recovery_status_label($value) : $value;
                 }
             }
         }
@@ -107,7 +110,20 @@ final class DiagnosticsPage
         $connection_key = 'paykassa_connection_test_' . get_current_user_id();
         $result = get_transient($connection_key);
         if (false !== $result) {
-            echo '<div class="notice notice-info"><p>' . esc_html('connected' === $result ? __('Connected: PayKassa API credentials were accepted.', 'paykassa') : ( 'failed' === $result ? __('Connection failed. Check API credentials or PayKassa availability.', 'paykassa') : __('Add API credentials to run the read-only connection test. SCI credentials have no documented read-only test.', 'paykassa') )) . '</p></div>';
+            $status = is_array($result) ? ( $result['status'] ?? '' ) : '';
+            if ('connected' === $status) {
+                echo '<div class="notice notice-info"><p>' . esc_html__('Connected: PayKassa API credentials were accepted.', 'paykassa') . '</p></div>';
+            } elseif ('ip_not_allowlisted' === $status) {
+                $ip = is_string($result['ip'] ?? null) ? $result['ip'] : '';
+                echo '<div class="notice notice-error"><p>' . esc_html('' !== $ip
+                    /* translators: %s: the server IP address PayKassa is rejecting. */
+                    ? sprintf(__("Connection failed: PayKassa is rejecting this server's IP address (%s). Add it to this shop's API settings IP whitelist in the PayKassa merchant dashboard, then test again.", 'paykassa'), $ip)
+                    : __("Connection failed: PayKassa is rejecting this server's IP address. Add it to this shop's API settings IP whitelist in the PayKassa merchant dashboard, then test again.", 'paykassa')) . '</p></div>';
+            } elseif ('failed' === $status) {
+                echo '<div class="notice notice-info"><p>' . esc_html__('Connection failed. Check API credentials or PayKassa availability.', 'paykassa') . '</p></div>';
+            } else {
+                echo '<div class="notice notice-info"><p>' . esc_html__('Add API credentials to run the read-only connection test. SCI credentials have no documented read-only test.', 'paykassa') . '</p></div>';
+            }
             delete_transient($connection_key);
         }
         echo '<table class="widefat striped"><tbody>';
@@ -135,6 +151,20 @@ final class DiagnosticsPage
             __('Malfunction endpoint (GET)', 'paykassa') => false !== has_action('woocommerce_api_' . MerchantEndpointUrls::FAILURE_RETURN),
             __('Transaction processor endpoint (POST, Live only)', 'paykassa') => false !== has_action('woocommerce_api_' . MerchantEndpointUrls::TRANSACTION_NOTIFICATION),
         );
+    }
+
+    private static function recovery_status_label(string $status): string
+    {
+        $labels = array(
+            'disabled' => __('Disabled', 'paykassa'),
+            'busy' => __('Busy', 'paykassa'),
+            'failed' => __('Failed', 'paykassa'),
+            'backoff' => __('Waiting to retry', 'paykassa'),
+            'in_progress' => __('In progress', 'paykassa'),
+            'needs_review' => __('Needs review', 'paykassa'),
+            'completed' => __('Completed', 'paykassa'),
+        );
+        return $labels[$status] ?? $status;
     }
 
     /** @param array<string, mixed> $settings */

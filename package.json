@@ -1,12 +1,41 @@
 {
   "name": "paykassa-for-woocommerce",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
+  "browserslist": [
+    "defaults",
+    "not IE 11"
+  ],
+  "targets": {
+    "adminStyles": {
+      "source": "resources/scss/admin-settings.scss",
+      "distDir": "assets",
+      "sourceMap": false
+    },
+    "blocksScript": {
+      "source": "resources/ts/blocks.ts",
+      "distDir": "assets/build",
+      "outputFormat": "global",
+      "isLibrary": false,
+      "sourceMap": false
+    }
+  },
   "scripts": {
-    "lint": "node --check assets/build/blocks.js",
-    "test": "npm run lint",
+    "clean": "rm -rf assets/admin-settings.css assets/build/blocks.js assets/images .parcel-cache",
+    "build:assets": "parcel build --no-content-hash --no-cache",
+    "build:images": "bash scripts/copy-images.sh",
+    "build": "npm run clean && npm run build:assets && npm run build:images",
+    "watch": "parcel watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "npm run typecheck && node --check assets/build/blocks.js",
+    "test": "npm run build && npm run lint",
     "test:e2e": "bash scripts/test-browser-e2e.sh",
-    "build": "node --check assets/build/blocks.js",
-    "plugin-zip": "bash scripts/package.sh"
+    "plugin-zip": "npm run build && bash scripts/package.sh"
+  },
+  "devDependencies": {
+    "@parcel/transformer-sass": "^2.16.4",
+    "parcel": "^2.16.4",
+    "sass": "^1.104.1",
+    "typescript": "^7.0.2"
   }
 }

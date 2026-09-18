@@ -23,6 +23,7 @@ final class PayKassaGateway extends \WC_Payment_Gateway
         $this->method_description = __('Provider-verified cryptocurrency payments through PayKassa.', 'paykassa');
         $this->has_fields = true;
         $this->supports = array( 'products' );
+        $this->icon = PAYKASSA_URL . 'assets/images/logo.svg';
         $this->init_form_fields();
         $this->init_settings();
         $this->settings_data = $this->settings;

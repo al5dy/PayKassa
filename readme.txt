@@ -5,7 +5,7 @@ Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
 Requires Plugins: woocommerce
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -281,6 +281,14 @@ No. PayKassa for WooCommerce is an independent integration for the PayKassa serv
 5. Site Health diagnostics for PayKassa gateway configuration.
 
 == Changelog ==
+
+= 2.0.1 =
+* Added a PayKassa payment method icon on the WooCommerce checkout.
+* Detect PayKassa's "IP not allowlisted" API rejection and show a diagnostics notice naming the blocked server IP, so merchants know exactly what to add to the PayKassa API IP whitelist.
+* Added readable labels for payment recovery status values and translated remaining diagnostics page strings.
+* Moved front-end assets to a Sass/TypeScript build pipeline; compiled admin CSS and block script are now generated from source instead of being hand-edited.
+* Added an optional, development-only merchant connectivity probe (`tools/`) for verifying PayKassa API/SCI/webhook reachability without touching WordPress or live orders.
+* Updated Russian translations.
 
 = 2.0.0 =
 * Complete modern rewrite for PHP 8.1+, WordPress 6.6+ and WooCommerce 8.5+.
